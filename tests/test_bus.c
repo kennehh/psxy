@@ -128,7 +128,7 @@ int test_bios(Bus* bus) {
 int main(int argc, char** argv) {
     Bus *bus = create_bus();
 
-    char *test_type = argc > 1 ? argv[1] : "all";
+    const char *test_type = argc > 1 ? argv[1] : "all";
 
     if (strcmp(test_type, "ram") == 0) {
         test_ram(bus);
