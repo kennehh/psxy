@@ -38,14 +38,16 @@ typedef struct {
 } Bus;
 
 Bus* create_bus();
-void destroy_bus(Bus* bus);
+Bus* create_flat_bus();
+void destroy_bus(Bus *bus);
+void destroy_flat_bus(Bus *bus);
 
-uint8_t bus_read8(Bus* bus, uint32_t addr);
-uint16_t bus_read16(Bus* bus, uint32_t addr);
-uint32_t bus_read32(Bus* bus, uint32_t addr);
+uint8_t bus_read8(Bus *bus, uint32_t addr);
+uint16_t bus_read16(Bus *bus, uint32_t addr);
+uint32_t bus_read32(Bus *bus, uint32_t addr);
 
-void bus_write8(Bus* bus, uint32_t addr, uint8_t value);
-void bus_write16(Bus* bus, uint32_t addr, uint16_t value);
-void bus_write32(Bus* bus, uint32_t addr, uint32_t value);
+void bus_write8(Bus *bus, uint32_t addr, uint8_t value);
+void bus_write16(Bus *bus, uint32_t addr, uint16_t value);
+void bus_write32(Bus *bus, uint32_t addr, uint32_t value);
 
 #endif // BUS_H

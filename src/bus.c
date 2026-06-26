@@ -1,8 +1,9 @@
 #include "stdio.h"
 #include "stdlib.h"
+#include "string.h"
 #include "bus.h"
 
-static void map_buffer(Bus* bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr) {
+static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
         uint32_t page = addr >> BUS_PAGE_SHIFT;
         bus->page_table[page] = buffer + (addr - start_phys_addr);
@@ -43,7 +44,21 @@ Bus* create_bus() {
     return bus;
 }
 
-void destroy_bus(Bus* bus) {
+Bus* create_flat_bus() {
+    // Create a bus with a flat memory model where all addresses map to RAM
+    Bus* bus = (Bus*)malloc(sizeof(Bus));
+    if (!bus) {
+        fprintf(stderr, "Failed to allocate Bus structure\n");
+        exit(EXIT_FAILURE);
+    }
+    // create a single large buffer for the whole physical address space (2^29 bytes)
+    size_t flat_size = 0x20000000; // 2^29 bytes
+    init_buffer(&bus->ram, flat_size);
+    map_buffer(bus, bus->ram, 0x00000000, flat_size); // Map the entire range to RAM
+    return bus;
+}
+
+void destroy_bus(Bus *bus) {
     if (!bus) return;
 
     free(bus->ram);
@@ -53,31 +68,38 @@ void destroy_bus(Bus* bus) {
     free(bus);
 }
 
-static inline uint8_t io_read8(Bus* bus, uint32_t addr) {
+void destroy_flat_bus(Bus *bus) {
+    if (!bus) return;
+
+    free(bus->ram);
+    free(bus);
+}
+
+static inline uint8_t io_read8(Bus *bus, uint32_t addr) {
     return 0; // Placeholder for I/O read implementation
 }
 
-static inline uint16_t io_read16(Bus* bus, uint32_t addr) {
+static inline uint16_t io_read16(Bus *bus, uint32_t addr) {
     return 0; // Placeholder for I/O read implementation
 }
 
-static inline uint32_t io_read32(Bus* bus, uint32_t addr) {
+static inline uint32_t io_read32(Bus *bus, uint32_t addr) {
     return 0; // Placeholder for I/O read implementation
 }
 
-static inline void io_write8(Bus* bus, uint32_t addr, uint8_t value) {
+static inline void io_write8(Bus *bus, uint32_t addr, uint8_t value) {
     // Placeholder for I/O write implementation
 }
 
-static inline void io_write16(Bus* bus, uint32_t addr, uint16_t value) {
+static inline void io_write16(Bus *bus, uint32_t addr, uint16_t value) {
     // Placeholder for I/O write implementation
 }
 
-static inline void io_write32(Bus* bus, uint32_t addr, uint32_t value) {
+static inline void io_write32(Bus *bus, uint32_t addr, uint32_t value) {
     // Placeholder for I/O write implementation
 }
 
-uint8_t bus_read8(Bus* bus, uint32_t addr) {
+uint8_t bus_read8(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -89,7 +111,7 @@ uint8_t bus_read8(Bus* bus, uint32_t addr) {
     return io_read8(bus, addr);
 }
 
-uint16_t bus_read16(Bus* bus, uint32_t addr) {
+uint16_t bus_read16(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -103,7 +125,7 @@ uint16_t bus_read16(Bus* bus, uint32_t addr) {
     return io_read16(bus, addr);
 }
 
-uint32_t bus_read32(Bus* bus, uint32_t addr) {
+uint32_t bus_read32(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -117,7 +139,7 @@ uint32_t bus_read32(Bus* bus, uint32_t addr) {
     return io_read32(bus, addr);
 }
 
-void bus_write8(Bus* bus, uint32_t addr, uint8_t value) {
+void bus_write8(Bus *bus, uint32_t addr, uint8_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -130,7 +152,7 @@ void bus_write8(Bus* bus, uint32_t addr, uint8_t value) {
     io_write8(bus, addr, value);
 }
 
-void bus_write16(Bus* bus, uint32_t addr, uint16_t value) {
+void bus_write16(Bus *bus, uint32_t addr, uint16_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -143,7 +165,7 @@ void bus_write16(Bus* bus, uint32_t addr, uint16_t value) {
     io_write16(bus, addr, value);
 }
 
-void bus_write32(Bus* bus, uint32_t addr, uint32_t value) {
+void bus_write32(Bus *bus, uint32_t addr, uint32_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
