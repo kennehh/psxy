@@ -1,6 +1,7 @@
-#include "bus.h"
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
+#include "bus.h"
 
 #define KSEG0_VIRT_START 0x80000000
 #define KSEG1_VIRT_START 0xA0000000
@@ -124,15 +125,30 @@ int test_bios(Bus* bus) {
     return 0;
 }
 
-int main() {
-    Bus* bus = create_bus();
+int main(int argc, char** argv) {
+    Bus *bus = create_bus();
 
-    test_ram(bus);
-    test_exp1(bus);
-    test_scratchpad(bus);
-    test_bios(bus);
+    char *test_type = argc > 1 ? argv[1] : "all";
+
+    if (strcmp(test_type, "ram") == 0) {
+        test_ram(bus);
+    } else if (strcmp(test_type, "exp1") == 0) {
+        test_exp1(bus);
+    } else if (strcmp(test_type, "scratchpad") == 0) {
+        test_scratchpad(bus);
+    } else if (strcmp(test_type, "bios") == 0) {
+        test_bios(bus);
+    } else if (strcmp(test_type, "all") == 0) {
+        test_ram(bus);
+        test_exp1(bus);
+        test_scratchpad(bus);
+        test_bios(bus);
+    } else {
+        printf("Unknown test type: %s\n", test_type);
+        destroy_bus(bus);
+        return 1;
+    }
 
     destroy_bus(bus);
-
     return 0;
 }
