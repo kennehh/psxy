@@ -58,6 +58,14 @@
     X(0x09, jalr) \
     X(0x0C, sys) \
     X(0x0D, brk) \
+    X(0x10, mfhi) \
+    X(0x11, mthi) \
+    X(0x12, mflo) \
+    X(0x13, mtlo) \
+    X(0x18, mult) \
+    X(0x19, multu) \
+    X(0x1A, div) \
+    X(0x1B, divu) \
     X(0x20, add) \
     X(0x21, addu) \
     X(0x22, sub) \
@@ -102,29 +110,34 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t rt = reg_read(cpu, RT(cpu)); \
-    if (condition) { \
-        cpu->next_branch_taken = true; \
-        cpu->next_branch_target = cpu->pc + 4 + (SIMM(cpu) << 2); \
-    } \
+    cpu->next_delay_slot = true; \
+    cpu->next_branch_target = get_next_pc(cpu) + (SIMM(cpu) << 2); \
+    cpu->next_branch_taken = condition; \
 }
 
 #define OP_I_BRANCH_Z(name, condition) \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
-    if (condition) { \
-        cpu->next_branch_taken = true; \
-        cpu->next_branch_target = cpu->pc + 4 + (SIMM(cpu) << 2); \
-    } \
+    cpu->next_delay_slot = true; \
+    cpu->next_branch_target = get_next_pc(cpu) + (SIMM(cpu) << 2); \
+    cpu->next_branch_taken = condition; \
 }
 
 #define OP_I_BRANCH_Z_LINK(name, condition) \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
-    if (condition) { \
-        cpu->next_branch_taken = true; \
-        cpu->next_branch_target = cpu->pc + 4 + (SIMM(cpu) << 2); \
-    } \
-    reg_write(cpu, 31, cpu->pc + 4); \
+    uint32_t pc = get_next_pc(cpu); \
+    cpu->next_delay_slot = true; \
+    cpu->next_branch_target = pc + (SIMM(cpu) << 2); \
+    cpu->next_branch_taken = condition; \
+    reg_write(cpu, 31, pc + 4); \
+}
+
+static inline uint32_t get_next_pc(Cpu *cpu) {
+    if (cpu->branch_taken) {
+        return cpu->branch_target;
+    }
+    return cpu->next_pc;
 }
 
 static inline uint32_t reg_read(Cpu *cpu, uint8_t reg) {
@@ -198,8 +211,8 @@ OP_I(addiu, rs + (int16_t)imm)
 OP_I(andi, rs & imm)
 OP_I(ori, rs | imm)
 OP_I(xori, rs ^ imm)
-OP_I(slti, rs < (int16_t)imm ? 1 : 0)
-OP_I(sltiu, rs < imm ? 1 : 0)
+OP_I(slti, (int32_t)rs < (int16_t)imm ? 1 : 0)
+OP_I(sltiu, rs < (uint32_t)(int16_t)imm ? 1 : 0)
 OP_I(lui, imm << 16)
 OP_I_BRANCH_RT(beq, rs == rt)
 OP_I_BRANCH_RT(bne, rs != rt)
@@ -214,11 +227,12 @@ static inline void execute_jr(Cpu *cpu, Bus *bus) {
     uint32_t target = reg_read(cpu, RS(cpu));
     cpu->next_branch_taken = true;
     cpu->next_branch_target = target;
+    cpu->next_delay_slot = true;
 }
 
 static inline void execute_jalr(Cpu *cpu, Bus *bus) {
-    reg_write(cpu, RD(cpu), cpu->pc + 4); // Save return address
     execute_jr(cpu, bus); // Jump to target address
+    reg_write(cpu, RD(cpu), get_next_pc(cpu) + 4); // Save return address
 }
 
 static inline void execute_mfhi(Cpu *cpu, Bus *bus) {
@@ -301,14 +315,20 @@ static inline void execute_sub(Cpu *cpu, Bus *bus) {
 }
 
 static inline void execute_j(Cpu *cpu, Bus *bus) {
-    uint32_t target = (cpu->pc & 0xF0000000) | (TARGET(cpu) << 2);
+    uint32_t pc = get_next_pc(cpu);
+    uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
     cpu->next_branch_taken = true;
     cpu->next_branch_target = target;
+    cpu->next_delay_slot = true;
 }
 
 static inline void execute_jal(Cpu *cpu, Bus *bus) {
-    reg_write(cpu, 31, cpu->pc + 4); // Save return address in $ra
-    execute_j(cpu, bus); // Jump to target address
+    uint32_t pc = get_next_pc(cpu);
+    uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
+    reg_write(cpu, 31, pc + 4); // Save return address in $ra
+    cpu->next_branch_taken = true;
+    cpu->next_branch_target = target;
+    cpu->next_delay_slot = true;
 }
 
 
@@ -398,9 +418,7 @@ static inline void execute_lwl(Cpu *cpu, Bus *bus) {
             break;
         }
         case 3: {
-            uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value = bus_read8(bus, aligned_addr);
-            result = (reg_value & 0xFFFFFF00) | mem_value;
+            result = bus_read32(bus, aligned_addr);
             break;
         }
     }
@@ -410,7 +428,6 @@ static inline void execute_lwl(Cpu *cpu, Bus *bus) {
 
 static inline void execute_lwr(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
-    uint32_t aligned_addr = addr & ~3; // Align address to 4 bytes
     uint32_t result;
 
     switch (addr & 3) {
@@ -420,7 +437,7 @@ static inline void execute_lwr(Cpu *cpu, Bus *bus) {
         case 1: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
             uint8_t mem_value_8 = bus_read8(bus, addr);
-            uint16_t mem_value_16 = bus_read16(bus, aligned_addr);
+            uint16_t mem_value_16 = bus_read16(bus, addr + 1);
             result = (reg_value & 0xFF000000) | (mem_value_16 << 8) | mem_value_8;
             break;
         }
@@ -432,7 +449,7 @@ static inline void execute_lwr(Cpu *cpu, Bus *bus) {
         }
         case 3: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value_8 = bus_read8(bus, aligned_addr);
+            uint8_t mem_value_8 = bus_read8(bus, addr);
             result = (reg_value & 0xFFFFFF00) | mem_value_8;
             break;
         }
@@ -624,10 +641,8 @@ uint32_t cpu_step(Cpu *cpu, Bus *bus) {
 
     if (cpu->next_exc_code != 0) {
         cpu->pc = raise_exception(cpu, cpu->next_exc_code);
-    } else if (cpu->branch_taken) {
-        cpu->pc = cpu->branch_target;
     } else {
-        cpu->pc = cpu->next_pc;
+        cpu->pc = get_next_pc(cpu);
     }
 
     cpu->next_pc = cpu->pc + 4;
