@@ -7,13 +7,14 @@
 #include "loader.h"
 #include "tty.h"
 #include <time.h>
+#include <string.h>
 
 #define MAX_STEPS 10000000
 #define TARGET_PC 0x80030000
 
 void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t instructions_executed = 0;
-    uint32_t max_steps = MAX_STEPS;
+    uint32_t max_steps = 7538292;
 
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -21,11 +22,8 @@ void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     while (max_steps-- > 0) {
         // tty_maybe_putchar(tty, cpu);
         cpu_step(cpu, bus);
+        // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
         instructions_executed++;
-        if (cpu->pc == TARGET_PC) {
-            printf("Reached target PC: 0x%08X\n", TARGET_PC);
-            break;
-        }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &end);
@@ -40,6 +38,16 @@ void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     printf("MIPS: %.2f\n", mips);
 }
 
+void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
+    uint32_t steps = 0;
+    while (steps++ < MAX_STEPS) {
+        cpu_step(cpu, bus);
+        if (cpu->pc == TARGET_PC) {
+            break;
+        }
+    }
+}
+
 int main() {
     Bus* bus = bus_create();
     Cpu* cpu = cpu_create();
@@ -50,6 +58,8 @@ int main() {
         cpu_reset(cpu);
         tty_reset(tty);
         load_bios(bus, "roms/SCPH1001.BIN");
+        run_until_kernel_init(cpu, bus, tty);
+        load_exe(cpu, bus, "roms/psxtest_cpu.exe");
 
         printf("Benchmark iteration %d\n", i + 1);
         benchmark(cpu, bus, tty);

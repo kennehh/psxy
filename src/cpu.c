@@ -590,7 +590,7 @@ static inline void execute_cop0(Cpu *cpu, Bus *bus) {
             break;
         case 0x10: {// RFE
             uint32_t stat = cpu->cop0.status;
-            cpu->cop0.status = (stat & ~0x3F) | ((stat >> 2) & 0x3F);
+            cpu->cop0.status = (stat & ~0x0F) | ((stat >> 2) & 0x0F);
             break;
         }
         default:

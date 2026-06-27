@@ -14,13 +14,6 @@
 #define ACTION_FETCH 0x04
 
 typedef struct {
-    uint8_t actions;
-    uint8_t size;
-    uint32_t addr;
-    uint32_t val;
-} Cycle;
-
-typedef struct {
     uint32_t R[32];
     uint32_t hi;
     uint32_t lo;
@@ -36,14 +29,14 @@ typedef struct {
     } delay;
 } State;
 
-Cycle *cycles;
-uint8_t cycle_count;
-uint8_t cycle_index;
-
 Cpu* cpu;
 State* initial;
 State* final;
 State* actual;
+
+Cycle *cycles;
+uint8_t cycle_count;
+uint8_t cycle_index;
 
 void set_state(State *state, struct json_object *json_state) {
     // r is stored in the JSON as an array of 32 integers
@@ -163,70 +156,6 @@ void set_cycles(Cycle *cycle_array, struct json_object *json_cycles) {
         }
     }
 }
-
-uint32_t consume_read_cycle(uint8_t action, uint8_t size, uint32_t addr) {
-    if (cycle_index >= cycle_count) {
-        fprintf(stderr, "No more cycles to consume\n");
-        return 0;
-    }
-
-    Cycle *current_cycle = &cycles[cycle_index];
-
-    if (current_cycle->actions != action || current_cycle->size != size || current_cycle->addr != addr) {
-        fprintf(stderr, "Cycle mismatch at index %d\n", cycle_index);
-        return 0;
-    }
-
-    cycle_index++;
-    return current_cycle->val;
-}
-
-void consume_write_cycle(uint8_t action, uint8_t size, uint32_t addr, uint32_t val) {
-    if (cycle_index >= cycle_count) {
-        fprintf(stderr, "No more cycles to consume\n");
-        return;
-    }
-
-    Cycle *current_cycle = &cycles[cycle_index];
-
-    if (current_cycle->actions != action || current_cycle->size != size || current_cycle->addr != addr || current_cycle->val != val) {
-        fprintf(stderr, "Cycle mismatch at index %d\n", cycle_index);
-        return;
-    }
-
-    cycle_index++;
-}
-
-uint8_t bus_read8_mock(Bus *bus, uint32_t addr) {
-    return consume_read_cycle(ACTION_READ, 1, addr);
-}
-uint16_t bus_read16_mock(Bus *bus, uint32_t addr) {
-    return consume_read_cycle(ACTION_READ, 2, addr);
-}
-uint32_t bus_read32_mock(Bus *bus, uint32_t addr) {
-    return consume_read_cycle(ACTION_READ, 4, addr);
-}
-uint32_t bus_fetch32_mock(Bus *bus, uint32_t addr) {
-    return consume_read_cycle(ACTION_FETCH, 4, addr);
-}
-void bus_write8_mock(Bus *bus, uint32_t addr, uint8_t value) {
-    consume_write_cycle(ACTION_WRITE, 1, addr, value);
-}
-void bus_write16_mock(Bus *bus, uint32_t addr, uint16_t value) {
-    consume_write_cycle(ACTION_WRITE, 2, addr, value);
-}
-void bus_write32_mock(Bus *bus, uint32_t addr, uint32_t value) {
-    consume_write_cycle(ACTION_WRITE, 4, addr, value);
-}
-
-uint8_t (*bus_read8)(Bus *bus, uint32_t addr) = bus_read8_mock;
-uint16_t (*bus_read16)(Bus *bus, uint32_t addr) = bus_read16_mock;
-uint32_t (*bus_read32)(Bus *bus, uint32_t addr) = bus_read32_mock;
-uint32_t (*bus_fetch32)(Bus *bus, uint32_t addr) = bus_fetch32_mock;
-void (*bus_write8)(Bus *bus, uint32_t addr, uint8_t value) = bus_write8_mock;
-void (*bus_write16)(Bus *bus, uint32_t addr, uint16_t value) = bus_write16_mock;
-void (*bus_write32)(Bus *bus, uint32_t addr, uint32_t value) = bus_write32_mock;
-
 
 int test_file(const char *filename, Cpu *cpu) {
     FILE* jsonl_file = fopen(filename, "r");

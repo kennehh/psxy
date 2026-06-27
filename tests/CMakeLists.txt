@@ -4,8 +4,10 @@ target_link_libraries(test_bus PRIVATE psxy_core)
 add_executable(test_cpu test_cpu.c)
 target_link_libraries(test_cpu PRIVATE psxy_core)
 
-add_executable(test_single_step test_single_step.c)
-target_link_libraries(test_single_step PRIVATE psxy_core json-c)
+add_executable(test_single_step test_single_step.c ../src/cpu.c ../src/bus.c ../src/exceptions.c)
+target_link_libraries(test_single_step PRIVATE json-c)
+target_include_directories(test_single_step PRIVATE ../src .)
+target_compile_definitions(test_single_step PRIVATE USE_SINGLE_STEP_BUS)
 
 add_test(NAME bus.ram COMMAND test_bus ram)
 add_test(NAME bus.exp1 COMMAND test_bus exp1)

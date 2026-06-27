@@ -9,7 +9,6 @@
 typedef struct {
     char buffer[TTY_BUFFER_SIZE];
     size_t buffer_index;
-    char message[TTY_BUFFER_SIZE];
     size_t strlen;
 } TTY;
 

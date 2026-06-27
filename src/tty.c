@@ -10,7 +10,6 @@ TTY *tty_create(void) {
     tty->buffer_index = 0;
     tty->strlen = 0;
     tty->buffer[0] = '\0';
-    tty->message[0] = '\0';
     return tty;
 }
 
@@ -23,7 +22,6 @@ void tty_reset(TTY *tty) {
     tty->buffer_index = 0;
     tty->strlen = 0;
     tty->buffer[0] = '\0';
-    tty->message[0] = '\0';
 }
 
 void tty_putchar(TTY *tty, Cpu *cpu) {
@@ -33,8 +31,7 @@ void tty_putchar(TTY *tty, Cpu *cpu) {
         tty->buffer[tty->buffer_index] = '\0';
     }
     if (c == '\n' || tty->buffer_index >= TTY_BUFFER_SIZE - 1) {
-        snprintf(tty->message, TTY_BUFFER_SIZE, "%s", tty->buffer);
-        printf("%s", tty->message);
+        printf("%s", tty->buffer);
         tty->buffer_index = 0;
         tty->buffer[0] = '\0';
     }
