@@ -39,3 +39,6 @@ Makefile
 # Temporary files
 *.tmp
 *.log
+
+roms
+tests/fixtures

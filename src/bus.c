@@ -99,7 +99,7 @@ static inline void io_write32(Bus *bus, uint32_t addr, uint32_t value) {
     // Placeholder for I/O write implementation
 }
 
-uint8_t bus_read8(Bus *bus, uint32_t addr) {
+uint8_t bus_read8_actual(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -111,7 +111,7 @@ uint8_t bus_read8(Bus *bus, uint32_t addr) {
     return io_read8(bus, addr);
 }
 
-uint16_t bus_read16(Bus *bus, uint32_t addr) {
+uint16_t bus_read16_actual(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -125,7 +125,7 @@ uint16_t bus_read16(Bus *bus, uint32_t addr) {
     return io_read16(bus, addr);
 }
 
-uint32_t bus_read32(Bus *bus, uint32_t addr) {
+uint32_t bus_read32_actual(Bus *bus, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -139,7 +139,7 @@ uint32_t bus_read32(Bus *bus, uint32_t addr) {
     return io_read32(bus, addr);
 }
 
-void bus_write8(Bus *bus, uint32_t addr, uint8_t value) {
+void bus_write8_actual(Bus *bus, uint32_t addr, uint8_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -152,7 +152,7 @@ void bus_write8(Bus *bus, uint32_t addr, uint8_t value) {
     io_write8(bus, addr, value);
 }
 
-void bus_write16(Bus *bus, uint32_t addr, uint16_t value) {
+void bus_write16_actual(Bus *bus, uint32_t addr, uint16_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -165,7 +165,7 @@ void bus_write16(Bus *bus, uint32_t addr, uint16_t value) {
     io_write16(bus, addr, value);
 }
 
-void bus_write32(Bus *bus, uint32_t addr, uint32_t value) {
+void bus_write32_actual(Bus *bus, uint32_t addr, uint32_t value) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
@@ -177,3 +177,11 @@ void bus_write32(Bus *bus, uint32_t addr, uint32_t value) {
     }
     io_write32(bus, addr, value);
 }
+
+uint8_t (*bus_read8)(Bus *bus, uint32_t addr) = bus_read8_actual;
+uint16_t (*bus_read16)(Bus *bus, uint32_t addr) = bus_read16_actual;
+uint32_t (*bus_read32)(Bus *bus, uint32_t addr) = bus_read32_actual;
+uint32_t (*bus_fetch32)(Bus *bus, uint32_t addr) = bus_read32_actual;
+void (*bus_write8)(Bus *bus, uint32_t addr, uint8_t value) = bus_write8_actual;
+void (*bus_write16)(Bus *bus, uint32_t addr, uint16_t value) = bus_write16_actual;
+void (*bus_write32)(Bus *bus, uint32_t addr, uint32_t value) = bus_write32_actual;

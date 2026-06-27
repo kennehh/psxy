@@ -530,7 +530,7 @@ static inline void cop0_read(Cpu *cpu, Bus *bus) {
         case 7:  value = cpu->cop0.dcic;      break;
         case 8:  value = cpu->cop0.badAddr;   break;
         case 12: value = cpu->cop0.status;    break;
-        case 13: value = cpu->cop0.cause.raw; break;
+        case 13: value = cpu->cop0.cause;     break;
         case 14: value = cpu->cop0.epc;       break;
         case 15: value = cpu->cop0.prid;      break;
     }
@@ -613,8 +613,7 @@ static inline uint32_t fetch(Cpu *cpu, Bus *bus) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return 0;
     }
-    uint32_t instruction = bus_read32(bus, cpu->pc);
-    cpu->pc += 4; // Increment the program counter
+    uint32_t instruction = bus_fetch32(bus, cpu->pc);
     return instruction;
 }
 

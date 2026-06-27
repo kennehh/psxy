@@ -5,21 +5,6 @@
 #include <stdbool.h>
 #include "bus.h"
 
-typedef union {
-    uint32_t raw;
-
-    struct {
-        uint8_t unused1 : 2;   // 0-1: Unused bits
-        uint8_t exc_code : 5;  // 2-6: Exception code
-        uint8_t unused2 : 1;   // 7: Unused bit
-        uint8_t ip : 8;        // 8-15: Interrupt pending bits
-        uint16_t unused3 : 12; // 16-27: Unused bits
-        uint8_t ce : 2;        // 28-29: Coprocessor error
-        uint8_t unused4 : 1;   // 30: Unused bit
-        uint8_t bd : 1;        // 31: Branch delay bit
-    } fields;
-} CauseRegister;
-
 typedef struct {
     uint32_t bpc; // Breakpoint Program Counter
     uint32_t bda; // Breakpoint Data Address
@@ -28,7 +13,7 @@ typedef struct {
     uint32_t badAddr; // Bad Address
     uint32_t bdam; // Breakpoint Data Address Mask
     uint32_t status; // Status Register
-    CauseRegister cause; // Cause of last exception
+    uint32_t cause; // Cause of last exception
     uint32_t epc; // Exception Program Counter
     uint32_t prid; // Processor Revision ID
 } Cop0;
