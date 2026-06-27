@@ -9,6 +9,10 @@
 #define BRANCH_STATE_IN_DELAY_SLOT 0b01
 #define BRANCH_STATE_TAKEN 0b11
 
+#define IS_BRANCH_TAKEN(state) ((state) == BRANCH_STATE_TAKEN)
+#define IS_IN_DELAY_SLOT(state) ((state) & BRANCH_STATE_IN_DELAY_SLOT)
+#define IS_NO_DELAY(state) ((state) == BRANCH_STATE_NO_DELAY)
+
 typedef struct {
     uint32_t bpc; // Breakpoint Program Counter
     uint32_t bda; // Breakpoint Data Address
@@ -41,7 +45,7 @@ typedef struct {
     uint8_t next_branch_state; // next state of the branch (0b00: no delay, 0b01: in delay slot, 0b11: branch taken)
     uint32_t next_branch_target; // target address of the next branch
 
-    uint32_t next_exc_code; // next exception code to raise
+    uint8_t next_exc_code; // next exception code to raise
 
     Cop0 cop0; // coprocessor 0 state
 

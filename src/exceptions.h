@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "bus.h"
 
+#define EXC_NONE 0xFF // No exception
 #define EXC_INT  0x00 // Interrupt
 #define EXC_MOD  0x01 // TLB modification
 #define EXC_TLBL 0x02 // TLB load/fetch

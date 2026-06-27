@@ -132,7 +132,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
-    if (cpu->branch_state == BRANCH_STATE_TAKEN) {
+    if (IS_BRANCH_TAKEN(cpu->branch_state)) {
         return cpu->branch_target;
     }
     return cpu->next_pc;
@@ -637,33 +637,32 @@ static inline void execute_instruction(Cpu *cpu, Bus *bus) {
 }
 
 static inline void cpu_begin_step(Cpu *cpu) {
-    cpu->inst = 0;
-    cpu->next_exc_code = 0;
     cpu->next_branch_state = BRANCH_STATE_NO_DELAY;
-    cpu->next_branch_target = 0;
     cpu->next_load_reg = 0;
+
+#ifdef SINGLE_STEP_TEST_MODE
+    cpu->next_branch_target = 0;
     cpu->next_load_value = 0;
+#endif
 }
 
-static inline void cpu_fetch(Cpu *cpu, Bus *bus) {
+static inline bool cpu_fetch(Cpu *cpu, Bus *bus) {
     if (cpu->pc & 3) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
-        return;
+        return false;
     }
     cpu->inst = bus_fetch32(bus, cpu->pc);
+    return true;
 }
 
 static inline void cpu_execute(Cpu *cpu, Bus *bus) {
-    if (cpu->next_exc_code != 0) {
-        return; // Skip execution if an exception is pending
-    }
     execute_instruction(cpu, bus);
 }
 
 static inline void cpu_finish_step(Cpu *cpu) {
     commit_load(cpu); // Commit any scheduled load after executing the instruction
 
-    if (cpu->next_exc_code != 0) {
+    if (cpu->next_exc_code != EXC_NONE) {
         raise_exception(cpu, cpu->next_exc_code);
         return;
     }
@@ -672,18 +671,21 @@ static inline void cpu_finish_step(Cpu *cpu) {
     cpu->next_pc = cpu->pc + 4;
     cpu->branch_state = cpu->next_branch_state;
 
-    #ifdef SINGLE_STEP_TEST_MODE
+#ifdef SINGLE_STEP_TEST_MODE
+    cpu->branch_target = cpu->next_branch_target;
+#else
+    if (IS_IN_DELAY_SLOT(cpu->branch_state)) {
         cpu->branch_target = cpu->next_branch_target;
-    #else
-        if (cpu->branch_state & BRANCH_STATE_IN_DELAY_SLOT) {
-            cpu->branch_target = cpu->next_branch_target;
-        }
-    #endif
+    }
+#endif
 }
 
 uint32_t cpu_step(Cpu *cpu, Bus *bus) {
     cpu_begin_step(cpu);
-    cpu_fetch(cpu, bus);
+    if (!cpu_fetch(cpu, bus)) {
+        cpu_finish_step(cpu);
+        return cpu->pc;
+    }
     cpu_execute(cpu, bus);
     cpu_finish_step(cpu);
     return cpu->pc;
@@ -703,6 +705,7 @@ void cpu_reset(Cpu *cpu) {
     memset(cpu, 0, sizeof(Cpu)); // Reset all fields to zero
     cpu->pc = 0xBFC00000; // Reset the program counter to the reset vector
     cpu->next_pc = cpu->pc + 4;
+    cpu->next_exc_code = EXC_NONE;
 }
 
 void cpu_destroy(Cpu *cpu) {

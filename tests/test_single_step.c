@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "bus.h"
+#include "exceptions.h"
 #include <stdio.h>
 #include <assert.h>
 #include <json-c/json.h>
@@ -118,7 +119,7 @@ void set_cpu_from_state(Cpu *cpu, State *state) {
     cpu->cop0.cause = state->CAUSE;
     cpu->pc = state->PC;
     cpu->next_pc = state->PC + 4;
-    cpu->next_exc_code = 0; // Clear any pending exception code
+    cpu->next_exc_code = EXC_NONE;
 
     cpu->branch_state = state->delay.load_slot | (state->delay.load_take << 1);
     cpu->branch_target = state->delay.load_target;
