@@ -33,6 +33,9 @@ void raise_exception(Cpu *cpu, uint8_t exc_code) {
     cpu->cop0.status = (cpu->cop0.status & ~0x3F) | ((cpu->cop0.status << 2) & 0x3F); // Shift the current interrupt mask and mode bits left by 2
 
     // reset CPU state for exception handling
+    #ifdef SINGLE_STEP_TEST_MODE
+    cpu->branch_target = 0; // not necessary to clear in normal operation, but single step tests expect this to be cleared
+    #endif
     cpu->branch_state = BRANCH_STATE_NO_DELAY;
     cpu->pc = 0x80000080; // Set the program counter to the exception handler address
     cpu->next_pc = 0x80000084;

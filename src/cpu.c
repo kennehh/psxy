@@ -641,6 +641,8 @@ static inline void cpu_begin_step(Cpu *cpu) {
     cpu->next_load_reg = 0;
 
 #ifdef SINGLE_STEP_TEST_MODE
+    // only next_branch_state and next_load_reg are required to be cleared,
+    // but single step tests expect next_branch_target and next_load_value to be cleared as well
     cpu->next_branch_target = 0;
     cpu->next_load_value = 0;
 #endif
@@ -672,6 +674,7 @@ static inline void cpu_finish_step(Cpu *cpu) {
     cpu->branch_state = cpu->next_branch_state;
 
 #ifdef SINGLE_STEP_TEST_MODE
+    // no need to clear if we've already cleared branch_state, but single step tests expect branch_target to be cleared as well
     cpu->branch_target = cpu->next_branch_target;
 #else
     if (IS_IN_DELAY_SLOT(cpu->branch_state)) {
