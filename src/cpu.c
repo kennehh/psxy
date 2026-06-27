@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cpu.h"
-#include "exc.h"
+#include "exceptions.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)

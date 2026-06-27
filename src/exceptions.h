@@ -1,5 +1,5 @@
-#ifndef EXC_H
-#define EXC_H
+#ifndef EXCEPTIONS_H
+#define EXCEPTIONS_H
 
 #include <stdint.h>
 #include "cpu.h"
@@ -22,4 +22,4 @@
 
 uint32_t raise_exception(Cpu *cpu, uint8_t exc_code);
 
-#endif // EXC_H
+#endif // EXCEPTIONS_H

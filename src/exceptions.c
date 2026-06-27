@@ -1,4 +1,4 @@
-#include "exc.h"
+#include "exceptions.h"
 
 #define CAUSE_IP_MASK 0x0000FF00 // Mask for the interrupt pending bits in the Cause register
 #define CAUSE_BT_MASK 0x40000000 // Mask for the branch delay bit in the Cause register
