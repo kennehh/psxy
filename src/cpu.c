@@ -674,7 +674,7 @@ static inline void cpu_finish_step(Cpu *cpu) {
     cpu->branch_state = cpu->next_branch_state;
 
 #ifdef SINGLE_STEP_TEST_MODE
-    // no need to clear if we've already cleared branch_state, but single step tests expect branch_target to be cleared as well
+    // no need to set branch_target if not in delay slot, but single step tests expect it to be set
     cpu->branch_target = cpu->next_branch_target;
 #else
     if (IS_IN_DELAY_SLOT(cpu->branch_state)) {
