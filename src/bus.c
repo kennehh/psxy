@@ -22,7 +22,7 @@ void init_buffer(uint8_t **buffer, size_t size) {
     }
 }
 
-Bus* bus_create() {
+Bus* bus_create(void) {
     Bus* bus = (Bus*)malloc(sizeof(Bus));
     if (!bus) {
         fprintf(stderr, "Failed to allocate Bus structure\n");
@@ -42,6 +42,15 @@ Bus* bus_create() {
     map_buffer(bus, bus->bios, BIOS_PHYS_START, BIOS_PHYS_END);
 
     return bus;
+}
+
+void bus_reset(Bus *bus) {
+    if (!bus) return;
+
+    memset(bus->ram, 0, RAM_SIZE);
+    memset(bus->exp1, 0, EXP1_SIZE);
+    memset(bus->scratchpad, 0, SCRATCHPAD_SIZE);
+    memset(bus->bios, 0, BIOS_SIZE);
 }
 
 void bus_destroy(Bus *bus) {

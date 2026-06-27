@@ -46,8 +46,9 @@ typedef struct {
     uint32_t inst; // current instruction
 } Cpu;
 
-Cpu* cpu_create();
+Cpu* cpu_create(void);
 void cpu_destroy(Cpu *cpu);
+void cpu_reset(Cpu *cpu);
 
 uint32_t cpu_step(Cpu *cpu, Bus *bus);
 

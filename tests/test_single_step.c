@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include "cpu.h"
 #include "bus.h"
 #include <stdio.h>

@@ -13,7 +13,7 @@ typedef struct {
     size_t strlen;
 } TTY;
 
-TTY *tty_create();
+TTY *tty_create(void);
 void tty_destroy(TTY *tty);
 void tty_reset(TTY *tty);
 void tty_putchar(TTY *tty, Cpu *cpu);

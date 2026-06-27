@@ -5,8 +5,7 @@
 #define CAUSE_BD_MASK 0x80000000 // Mask for the branch delay bit in the Cause register
 
 
-uint32_t raise_exception(Cpu *cpu, uint8_t exc_code) {
-
+void raise_exception(Cpu *cpu, uint8_t exc_code) {
     uint32_t cause = cpu->cop0.cause & CAUSE_IP_MASK; // preserve the interrupt pending bits
     cause |= exc_code << 2; // set the exception code
 

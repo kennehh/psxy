@@ -618,38 +618,28 @@ static inline void execute_bcond(Cpu *cpu, Bus *bus) {
 }
 
 static inline void execute_instruction(Cpu *cpu, Bus *bus) {
-    #define X(opcode, name) [opcode] = &&label_##name,
-    static const void* dispatch_table[64] = {
-        [0 ... 63] = &&label_unknown,
-        [0] = &&label_special,
-        OPCODE_TABLE
-    };
-    #undef X
-
-    #define X(funct, name) [funct] = &&label_##name,
-    static const void* special_dispatch_table[64] = {
-        [0 ... 63] = &&label_unknown,
-        FUNCT_TABLE
-    };
-    #undef X
-
-    goto *dispatch_table[OPCODE(cpu)];
-
-    label_special:
-        goto *special_dispatch_table[FUNCT(cpu)];
-
-    #define X(opcode, name) label_##name: execute_##name(cpu, bus); return;
-    OPCODE_TABLE
-    #undef X
-
-    #define X(funct, name) label_##name: execute_##name(cpu, bus); return;
-    FUNCT_TABLE
-    #undef X
-
-    label_unknown:
-        // Handle unknown instruction
-        cpu->next_exc_code = EXC_RI; // Reserved instruction exception
+    if (cpu->inst == 0) {
         return;
+    }
+
+    switch (OPCODE(cpu)) {
+        case 0x00: // SPECIAL
+            switch (FUNCT(cpu)) {
+                #define X(funct, name) case funct: execute_##name(cpu, bus); break;
+                FUNCT_TABLE
+                #undef X
+                default:
+                    cpu->next_exc_code = EXC_RI; // Reserved instruction exception
+                    break;
+            }
+            break;
+        #define X(opcode, name) case opcode: execute_##name(cpu, bus); break;
+        OPCODE_TABLE
+        #undef X
+        default:
+            cpu->next_exc_code = EXC_RI; // Reserved instruction exception
+            break;
+    }
 }
 
 static inline void cpu_begin_step(Cpu *cpu) {
@@ -700,15 +690,20 @@ uint32_t cpu_step(Cpu *cpu, Bus *bus) {
     return cpu->pc;
 }
 
-Cpu *cpu_create() {
+Cpu *cpu_create(void) {
     Cpu *cpu = (Cpu *)malloc(sizeof(Cpu));
     if (!cpu) {
         exit(EXIT_FAILURE); // Handle memory allocation failure
     }
-    memset(cpu, 0, sizeof(Cpu)); // Initialize all fields to zero
-    cpu->pc = 0xBFC00000; // Set the initial program counter to the reset vector
-    cpu->next_pc = cpu->pc + 4;
+    cpu_reset(cpu);
     return cpu;
+}
+
+void cpu_reset(Cpu *cpu) {
+    if (!cpu) return;
+    memset(cpu, 0, sizeof(Cpu)); // Reset all fields to zero
+    cpu->pc = 0xBFC00000; // Reset the program counter to the reset vector
+    cpu->next_pc = cpu->pc + 4;
 }
 
 void cpu_destroy(Cpu *cpu) {

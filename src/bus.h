@@ -37,8 +37,9 @@ typedef struct {
     uint8_t* bios;
 } Bus;
 
-Bus* bus_create();
+Bus* bus_create(void);
 void bus_destroy(Bus *bus);
+void bus_reset(Bus *bus);
 
 extern uint8_t (*bus_read8)(Bus *bus, uint32_t addr);
 extern uint16_t (*bus_read16)(Bus *bus, uint32_t addr);

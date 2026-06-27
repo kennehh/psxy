@@ -1,7 +1,7 @@
 #include "tty.h"
 #include <stdio.h>
 
-TTY *tty_create() {
+TTY *tty_create(void) {
     TTY *tty = (TTY *)malloc(sizeof(TTY));
     if (!tty) {
         fprintf(stderr, "Failed to allocate TTY structure\n");
@@ -41,18 +41,13 @@ void tty_putchar(TTY *tty, Cpu *cpu) {
 }
 
 void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
-    if (cpu->pc == 0xA0) {
-        uint8_t func_code = cpu->r[9] & 0xFF;
-        if (func_code == 0x3C) {
+    uint16_t pc_func = ((cpu->pc & 0xFF) << 8) | (cpu->r[9] & 0xFF);
+    switch (pc_func) {
+        case 0xA03C: // PC = 0xA0, func_code = 0x3C
+        case 0xB03D: // PC = 0xB0, func_code = 0x3D
             tty_putchar(tty, cpu);
-        }
-        return;
-    }
-    if (cpu->pc == 0xB0) {
-        uint8_t func_code = cpu->r[9] & 0xFF;
-        if (func_code == 0x3D) {
-            tty_putchar(tty, cpu);
-        }
-        return;
+            break;
+        default:
+            break;
     }
 }

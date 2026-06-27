@@ -20,6 +20,6 @@
 #define EXC_OV   0x0C // Arithmetic overflow
 #define EXC_TR   0x0D // Trap
 
-uint32_t raise_exception(Cpu *cpu, uint8_t exc_code);
+void raise_exception(Cpu *cpu, uint8_t exc_code);
 
 #endif // EXCEPTIONS_H

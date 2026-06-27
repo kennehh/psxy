@@ -1,18 +1,31 @@
 cmake_minimum_required(VERSION 3.10)
-project(psxy)
+
+project(psxy C)
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
-add_library(bus_lib src/bus.c)
-target_include_directories(bus_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_library(psxy_core
+    src/bus.c
+    src/cpu.c
+    src/exceptions.c
+    src/tty.c
+    src/loader.c
+)
 
-add_library(cpu_lib src/cpu.c src/exceptions.c)
-target_include_directories(cpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(psxy_core PUBLIC src)
 
-add_executable(psxy src/main.c src/tty.c src/loader.c)
-target_link_libraries(psxy PRIVATE bus_lib cpu_lib)
+target_compile_options(psxy_core PRIVATE
+    -Wall
+    -Wextra
+    -Wshadow
+    -Wstrict-prototypes
+    -Wmissing-prototypes
+)
+
+add_executable(psxy src/main.c)
+target_link_libraries(psxy PRIVATE psxy_core)
 
 enable_testing()
-
 add_subdirectory(tests)

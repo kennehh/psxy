@@ -1,26 +1,58 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdint.h>
 #include <stdio.h>
 #include "bus.h"
 #include "cpu.h"
 #include "loader.h"
 #include "tty.h"
+#include <time.h>
+
+#define MAX_STEPS 10000000
+#define TARGET_PC 0x80030000
+
+void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
+    uint32_t instructions_executed = 0;
+    uint32_t max_steps = MAX_STEPS;
+
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    while (max_steps-- > 0) {
+        // tty_maybe_putchar(tty, cpu);
+        cpu_step(cpu, bus);
+        instructions_executed++;
+        if (cpu->pc == TARGET_PC) {
+            printf("Reached target PC: 0x%08X\n", TARGET_PC);
+            break;
+        }
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    long seconds = end.tv_sec - start.tv_sec;
+    long nanoseconds = end.tv_nsec - start.tv_nsec;
+    double elapsed_ms = (seconds * 1000.0) + (nanoseconds / 1000000.0);
+
+    printf("Instructions executed: %u\n", instructions_executed);
+    printf("Elapsed time: %.2f ms\n", elapsed_ms);
+    double mips = instructions_executed / (elapsed_ms * 1e-3) / 1e6;
+    printf("MIPS: %.2f\n", mips);
+}
 
 int main() {
     Bus* bus = bus_create();
     Cpu* cpu = cpu_create();
     TTY* tty = tty_create();
 
-    load_bios(bus, "../roms/SCPH1001.BIN");
-    uint32_t max_steps = 10000000;
-    uint32_t target_pc = 0x80030000;
+    for (int i = 0; i < 10; i++) {
+        bus_reset(bus);
+        cpu_reset(cpu);
+        tty_reset(tty);
+        load_bios(bus, "roms/SCPH1001.BIN");
 
-    while (max_steps-- > 0) {
-        tty_maybe_putchar(tty, cpu);
-        cpu_step(cpu, bus);
-        if (cpu->pc == target_pc) {
-            printf("Reached target PC: 0x%08X\n", target_pc);
-            break;
-        }
+        printf("Benchmark iteration %d\n", i + 1);
+        benchmark(cpu, bus, tty);
     }
 
     tty_destroy(tty);
