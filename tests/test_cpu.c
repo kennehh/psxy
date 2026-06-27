@@ -7,8 +7,8 @@
 #define ADDIU(rs, rt, imm) ITYPE(0x09, rs, rt, imm)
 
 int main() {
-    Bus* bus = create_flat_bus();
-    Cpu* cpu = create_cpu();
+    Bus* bus = bus_create();
+    Cpu* cpu = cpu_create();
 
     // should delay LW result by one instruction
     cpu->pc = 0x00000000;
@@ -44,7 +44,7 @@ int main() {
         result = 1;
     }
 
-    destroy_cpu(cpu);
-    destroy_flat_bus(bus);
+    cpu_destroy(cpu);
+    bus_destroy(bus);
     return result;
 }

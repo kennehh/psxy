@@ -328,7 +328,7 @@ int test_file(const char *filename, Cpu *cpu) {
 
 
 int main(int argc, char *argv[]) {
-    cpu = create_cpu();
+    cpu = cpu_create();
     initial = malloc(sizeof(State));
     final = malloc(sizeof(State));
     actual = malloc(sizeof(State));

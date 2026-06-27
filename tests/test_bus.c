@@ -154,7 +154,7 @@ int test_bios(Bus* bus) {
 }
 
 int main(int argc, char** argv) {
-    Bus *bus = create_bus();
+    Bus *bus = bus_create();
 
     const char *test_type = argc > 1 ? argv[1] : "all";
     int result = 0;
@@ -174,10 +174,10 @@ int main(int argc, char** argv) {
         result |= test_bios(bus);
     } else {
         printf("Unknown test type: %s\n", test_type);
-        destroy_bus(bus);
+        bus_destroy(bus);
         return 1;
     }
 
-    destroy_bus(bus);
+    bus_destroy(bus);
     return result;
 }

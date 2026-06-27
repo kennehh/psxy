@@ -33,13 +33,10 @@ uint32_t raise_exception(Cpu *cpu, uint8_t exc_code) {
     cpu->cop0.status = (stat & ~0x3F) | ((stat & 0x3F) << 2); // Shift the current interrupt mask and mode bits left by 2
     cpu->cop0.cause = cause; // Update the Cause register with the new value
 
-    // clear pending loads and delay slot flags
-    cpu->next_load_reg = 0;
-    cpu->next_load_value = 0;
-    cpu->next_delay_slot = false;
-    cpu->next_branch_taken = false;
-    cpu->next_branch_target = 0;
-    cpu->next_exc_code = 0; // Clear the next exception code after handling
-
-    return 0x80000080; // Return the address of the exception handler
+    // reset CPU state for exception handling
+    cpu->branch_taken = false;
+    cpu->branch_target = 0;
+    cpu->in_delay_slot = false;
+    cpu->pc = 0x80000080; // Set the program counter to the exception handler address
+    cpu->next_pc = 0x80000084;
 }

@@ -11,6 +11,7 @@
 #define SHAMT(cpu) ((cpu->inst >> 6) & 0x1F)
 #define IMM(cpu) (cpu->inst & 0xFFFF)
 #define SIMM(cpu) ((int16_t)(cpu->inst & 0xFFFF))
+#define SIMM_EXT(cpu) ((uint32_t)(int16_t)(cpu->inst & 0xFFFF))
 #define TARGET(cpu) (cpu->inst & 0x3FFFFFF)
 
 #define ADD_OVERFLOW_CHECK(a, b, result) (((a ^ result) & (b ^ result) & 0x80000000) != 0)
@@ -111,7 +112,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t rt = reg_read(cpu, RT(cpu)); \
     cpu->next_delay_slot = true; \
-    cpu->next_branch_target = get_next_pc(cpu) + (SIMM(cpu) << 2); \
+    cpu->next_branch_target = get_next_pc(cpu) + (SIMM_EXT(cpu) << 2); \
     cpu->next_branch_taken = condition; \
 }
 
@@ -119,7 +120,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     cpu->next_delay_slot = true; \
-    cpu->next_branch_target = get_next_pc(cpu) + (SIMM(cpu) << 2); \
+    cpu->next_branch_target = get_next_pc(cpu) + (SIMM_EXT(cpu) << 2); \
     cpu->next_branch_taken = condition; \
 }
 
@@ -128,7 +129,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t pc = get_next_pc(cpu); \
     cpu->next_delay_slot = true; \
-    cpu->next_branch_target = pc + (SIMM(cpu) << 2); \
+    cpu->next_branch_target = pc + (SIMM_EXT(cpu) << 2); \
     cpu->next_branch_taken = condition; \
     reg_write(cpu, 31, pc + 4); \
 }
@@ -165,6 +166,31 @@ static inline void reg_write(Cpu *cpu, uint8_t reg, uint32_t value) {
         cpu->load_reg = 0; // Clear the load register to prevent double loading
     }
     cpu->r[reg] = value;
+}
+
+static inline bool is_cache_isolated(uint32_t status) {
+    return (status & 0x00010000) != 0; // Check the KSU bits for cache isolation
+}
+
+static inline void cpu_write8(Cpu *cpu, Bus *bus, uint32_t addr, uint8_t value) {
+    if (is_cache_isolated(cpu->cop0.status)) {
+        return;
+    }
+    bus_write8(bus, addr, value);
+}
+
+static inline void cpu_write16(Cpu *cpu, Bus *bus, uint32_t addr, uint16_t value) {
+    if (is_cache_isolated(cpu->cop0.status)) {
+        return;
+    }
+    bus_write16(bus, addr, value);
+}
+
+static inline void cpu_write32(Cpu *cpu, Bus *bus, uint32_t addr, uint32_t value) {
+    if (is_cache_isolated(cpu->cop0.status)) {
+        return;
+    }
+    bus_write32(bus, addr, value);
 }
 
 static inline void schedule_load(Cpu *cpu, uint8_t reg, uint32_t value) {
@@ -461,7 +487,7 @@ static inline void execute_lwr(Cpu *cpu, Bus *bus) {
 static inline void execute_sb(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
     uint8_t value = (uint8_t)reg_read(cpu, RT(cpu));
-    bus_write8(bus, addr, value);
+    cpu_write8(cpu, bus, addr, value);
 }
 
 static inline void execute_sh(Cpu *cpu, Bus *bus) {
@@ -471,7 +497,7 @@ static inline void execute_sh(Cpu *cpu, Bus *bus) {
         return;
     }
     uint16_t value = (uint16_t)reg_read(cpu, RT(cpu));
-    bus_write16(bus, addr, value);
+    cpu_write16(cpu, bus, addr, value);
 }
 
 static inline void execute_sw(Cpu *cpu, Bus *bus) {
@@ -481,7 +507,7 @@ static inline void execute_sw(Cpu *cpu, Bus *bus) {
         return;
     }
     uint32_t value = reg_read(cpu, RT(cpu));
-    bus_write32(bus, addr, value);
+    cpu_write32(cpu, bus, addr, value);
 }
 
 static inline void execute_swl(Cpu *cpu, Bus *bus) {
@@ -491,17 +517,17 @@ static inline void execute_swl(Cpu *cpu, Bus *bus) {
 
     switch (addr & 3) {
         case 0:
-            bus_write8(bus, aligned_addr, value >> 24);
+            cpu_write8(cpu, bus, aligned_addr, value >> 24);
             break;
         case 1:
-            bus_write16(bus, aligned_addr, value >> 16);
+            cpu_write16(cpu, bus, aligned_addr, value >> 16);
             break;
         case 2:
-            bus_write16(bus, aligned_addr, value >> 8);
-            bus_write8(bus, addr, (value >> 24) & 0xFF);
+            cpu_write16(cpu, bus, aligned_addr, value >> 8);
+            cpu_write8(cpu, bus, addr, (value >> 24) & 0xFF);
             break;
         case 3:
-            bus_write32(bus, aligned_addr, value);
+            cpu_write32(cpu, bus, aligned_addr, value);
             break;
     }
 }
@@ -512,17 +538,17 @@ static inline void execute_swr(Cpu *cpu, Bus *bus) {
 
     switch (addr & 3) {
         case 0:
-            bus_write32(bus, addr, value);
+            cpu_write32(cpu, bus, addr, value);
             break;
         case 1:
-            bus_write8(bus, addr, value);
-            bus_write16(bus, addr + 1, value >> 8);
+            cpu_write8(cpu, bus, addr, value);
+            cpu_write16(cpu, bus, addr + 1, value >> 8);
             break;
         case 2:
-            bus_write16(bus, addr, value);
+            cpu_write16(cpu, bus, addr, value);
             break;
         case 3:
-            bus_write8(bus, addr, value);
+            cpu_write8(cpu, bus, addr, value);
             break;
     }
 }
@@ -562,10 +588,11 @@ static inline void execute_cop0(Cpu *cpu, Bus *bus) {
         case 0x04: // MTC0
             cop0_write(cpu, RD(cpu), reg_read(cpu, RT(cpu)));
             break;
-        case 0x10: // RFE
+        case 0x10: {// RFE
             uint32_t stat = cpu->cop0.status;
             cpu->cop0.status = (stat & ~0x3F) | ((stat >> 2) & 0x3F);
             break;
+        }
         default:
             cpu->next_exc_code = EXC_RI; // Reserved instruction exception
             break;
@@ -625,33 +652,55 @@ static inline void execute_instruction(Cpu *cpu, Bus *bus) {
         return;
 }
 
-static inline uint32_t fetch(Cpu *cpu, Bus *bus) {
-    if (cpu->pc & 3) {
-        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
-        return 0;
-    }
-    uint32_t instruction = bus_fetch32(bus, cpu->pc);
-    return instruction;
+static inline void cpu_begin_step(Cpu *cpu) {
+    cpu->inst = 0;
+    cpu->next_exc_code = 0;
+    cpu->next_branch_taken = false;
+    cpu->next_branch_target = 0;
+    cpu->next_delay_slot = false;
+    cpu->next_load_reg = 0;
+    cpu->next_load_value = 0;
 }
 
-uint32_t cpu_step(Cpu *cpu, Bus *bus) {
-    cpu->inst = fetch(cpu, bus);
+static inline void cpu_fetch(Cpu *cpu, Bus *bus) {
+    if (cpu->pc & 3) {
+        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
+        return;
+    }
+    cpu->inst = bus_fetch32(bus, cpu->pc);
+}
+
+static inline void cpu_execute(Cpu *cpu, Bus *bus) {
+    if (cpu->next_exc_code != 0) {
+        return; // Skip execution if an exception is pending
+    }
     execute_instruction(cpu, bus);
+}
+
+static inline void cpu_finish_step(Cpu *cpu) {
     commit_load(cpu); // Commit any scheduled load after executing the instruction
 
     if (cpu->next_exc_code != 0) {
-        cpu->pc = raise_exception(cpu, cpu->next_exc_code);
-    } else {
-        cpu->pc = get_next_pc(cpu);
+        raise_exception(cpu, cpu->next_exc_code);
+        return;
     }
 
+    cpu->pc = get_next_pc(cpu);
     cpu->next_pc = cpu->pc + 4;
     cpu->branch_taken = cpu->next_branch_taken;
     cpu->branch_target = cpu->next_branch_target;
     cpu->in_delay_slot = cpu->next_delay_slot;
 }
 
-Cpu *create_cpu() {
+uint32_t cpu_step(Cpu *cpu, Bus *bus) {
+    cpu_begin_step(cpu);
+    cpu_fetch(cpu, bus);
+    cpu_execute(cpu, bus);
+    cpu_finish_step(cpu);
+    return cpu->pc;
+}
+
+Cpu *cpu_create() {
     Cpu *cpu = (Cpu *)malloc(sizeof(Cpu));
     if (!cpu) {
         exit(EXIT_FAILURE); // Handle memory allocation failure
@@ -662,7 +711,7 @@ Cpu *create_cpu() {
     return cpu;
 }
 
-void destroy_cpu(Cpu *cpu) {
+void cpu_destroy(Cpu *cpu) {
     if (!cpu) return;
     free(cpu);
 }

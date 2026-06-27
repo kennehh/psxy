@@ -1,6 +1,7 @@
 #include "loader.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void load_bios(Bus *bus, const char *bios_path) {
     FILE *bios_file = fopen(bios_path, "rb");

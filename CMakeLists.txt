@@ -10,6 +10,9 @@ target_include_directories(bus_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_library(cpu_lib src/cpu.c src/exceptions.c)
 target_include_directories(cpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+add_executable(psxy src/main.c src/tty.c src/loader.c)
+target_link_libraries(psxy PRIVATE bus_lib cpu_lib)
+
 enable_testing()
 
 add_subdirectory(tests)

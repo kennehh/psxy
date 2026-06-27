@@ -10,7 +10,7 @@ static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint
     }
 }
 
-inline static uint32_t physical_address(uint32_t addr) {
+static inline uint32_t physical_address(uint32_t addr) {
     return addr & 0x1FFFFFFF; // Mask to 29 bits
 }
 
@@ -22,7 +22,7 @@ void init_buffer(uint8_t **buffer, size_t size) {
     }
 }
 
-Bus* create_bus() {
+Bus* bus_create() {
     Bus* bus = (Bus*)malloc(sizeof(Bus));
     if (!bus) {
         fprintf(stderr, "Failed to allocate Bus structure\n");
@@ -44,34 +44,13 @@ Bus* create_bus() {
     return bus;
 }
 
-Bus* create_flat_bus() {
-    // Create a bus with a flat memory model where all addresses map to RAM
-    Bus* bus = (Bus*)malloc(sizeof(Bus));
-    if (!bus) {
-        fprintf(stderr, "Failed to allocate Bus structure\n");
-        exit(EXIT_FAILURE);
-    }
-    // create a single large buffer for the whole physical address space (2^29 bytes)
-    size_t flat_size = 0x20000000; // 2^29 bytes
-    init_buffer(&bus->ram, flat_size);
-    map_buffer(bus, bus->ram, 0x00000000, flat_size); // Map the entire range to RAM
-    return bus;
-}
-
-void destroy_bus(Bus *bus) {
+void bus_destroy(Bus *bus) {
     if (!bus) return;
 
     free(bus->ram);
     free(bus->exp1);
     free(bus->scratchpad);
     free(bus->bios);
-    free(bus);
-}
-
-void destroy_flat_bus(Bus *bus) {
-    if (!bus) return;
-
-    free(bus->ram);
     free(bus);
 }
 
@@ -140,8 +119,7 @@ uint32_t bus_read32_actual(Bus *bus, uint32_t addr) {
 }
 
 void bus_write8_actual(Bus *bus, uint32_t addr, uint8_t value) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    addr = physical_address(addr); uint32_t page = addr >> BUS_PAGE_SHIFT;
     uint32_t offset = addr & BUS_PAGE_MASK;
     uint8_t *page_ptr = bus->page_table[page];
 
