@@ -29,7 +29,7 @@ void raise_exception(Cpu *cpu, uint8_t exc_code) {
     }
 
     uint32_t stat = cpu->cop0.status;
-    cpu->cop0.status = (stat & ~0x3F) | ((stat & 0x3F) << 2); // Shift the current interrupt mask and mode bits left by 2
+    cpu->cop0.status = (stat & ~0x3F) | ((stat << 2) & 0x3F); // Shift the current interrupt mask and mode bits left by 2
     cpu->cop0.cause = cause; // Update the Cause register with the new value
 
     // reset CPU state for exception handling

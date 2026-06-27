@@ -30,6 +30,7 @@
 #define BIOS_SIZE 1024 * 512 // 512KB of BIOS
 #define BIOS_PHYS_START 0x1FC00000
 #define BIOS_PHYS_END   (BIOS_PHYS_START + BIOS_SIZE)
+
 typedef struct {
     uint8_t* page_table[BUS_PAGE_COUNT];
 
