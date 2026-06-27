@@ -5,6 +5,7 @@
 #include <json-c/json.h>
 #include <stdbool.h>
 #include <string.h>
+#include <dirent.h>
 
 #define ACTION_READ 0x01
 #define ACTION_WRITE 0x02
@@ -36,6 +37,11 @@ typedef struct {
 Cycle *cycles;
 uint8_t cycle_count;
 uint8_t cycle_index;
+
+Cpu* cpu;
+State* initial;
+State* final;
+State* actual;
 
 void set_state(State *state, struct json_object *json_state) {
     // r is stored in the JSON as an array of 32 integers
@@ -219,13 +225,9 @@ void (*bus_write8)(Bus *bus, uint32_t addr, uint8_t value) = bus_write8_mock;
 void (*bus_write16)(Bus *bus, uint32_t addr, uint16_t value) = bus_write16_mock;
 void (*bus_write32)(Bus *bus, uint32_t addr, uint32_t value) = bus_write32_mock;
 
-int main() {
-    Cpu* cpu = create_cpu();
-    State* initial = malloc(sizeof(State));
-    State* final = malloc(sizeof(State));
-    State* actual = malloc(sizeof(State));
 
-    FILE* jsonl_file = fopen("../../tests/fixtures/r3000a/v1/ADD.jsonl", "r");
+int test_file(const char *filename, Cpu *cpu) {
+    FILE* jsonl_file = fopen(filename, "r");
     if (!jsonl_file) {
         perror("Failed to open JSONL file");
         return 1;
@@ -311,17 +313,34 @@ int main() {
             if (actual->delay.branch_val != final->delay.branch_val) {
                 fprintf(stderr, "Branch value mismatch: expected 0x%08X, got 0x%08X\n", final->delay.branch_val, actual->delay.branch_val);
             }
-            assert(0 && "Test failed");
+            exit(EXIT_FAILURE);
             break;
-        } else {
-            printf("Test passed for instruction %s (opcode: %u) on line %zu\n", name, opcode, line_count);
         }
 
         json_object_put(parsed_json);
     }
 
+    printf("All tests passed for file: %s\n", filename);
+
     free(line);
     fclose(jsonl_file);
+}
+
+
+int main(int argc, char *argv[]) {
+    cpu = create_cpu();
+    initial = malloc(sizeof(State));
+    final = malloc(sizeof(State));
+    actual = malloc(sizeof(State));
+
+    // arg should be the path to the JSONL file
+    if (argc < 2 || argc > 2) {
+        fprintf(stderr, "Usage: %s <path_to_jsonl_file>\n", argv[0]);
+        return 1;
+    }
+
+    test_file(argv[1], cpu);
+
     free(initial);
     free(final);
     free(actual);

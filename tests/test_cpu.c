@@ -1,7 +1,6 @@
 #include "cpu.h"
 #include "bus.h"
 #include <stdio.h>
-#include <assert.h>
 
 #define ITYPE(opcode, rs, rt, imm) (((opcode & 0x3F) << 26) | ((rs & 0x1F) << 21) | ((rt & 0x1F) << 16) | (imm & 0xFFFF))
 #define LW(rs, rt, imm) ITYPE(0x23, rs, rt, imm)
@@ -29,11 +28,23 @@ int main() {
     cpu_step(cpu, bus); // Execute first ADDIU
     cpu_step(cpu, bus); // Execute second ADDIU
 
+    int result = 0;
+
     // Check the results
-    assert(cpu->r[2] == 0xCAFEBABE && "$2 should now have the loaded value");
-    assert(cpu->r[3] == 0xDEADBEEF + 1 && "$3 should use old value of $2");
-    assert(cpu->r[4] == 0xCAFEBABE + 1 && "$4 should use new value of $2");
+    if (cpu->r[2] != 0xCAFEBABE) {
+        fprintf(stderr, "$2 should now have the loaded value, but got 0x%08X\n", cpu->r[2]);
+        result = 1;
+    }
+    if (cpu->r[3] != 0xDEADBEEF + 1) {
+        fprintf(stderr, "$3 should use old value of $2, but got 0x%08X\n", cpu->r[3]);
+        result = 1;
+    }
+    if (cpu->r[4] != 0xCAFEBABE + 1) {
+        fprintf(stderr, "$4 should use new value of $2, but got 0x%08X\n", cpu->r[4]);
+        result = 1;
+    }
 
     destroy_cpu(cpu);
     destroy_flat_bus(bus);
+    return result;
 }

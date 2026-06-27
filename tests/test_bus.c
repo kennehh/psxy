@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <assert.h>
 #include <string.h>
 #include "bus.h"
 
@@ -7,56 +6,82 @@
 #define KSEG1_VIRT_START 0xA0000000
 
 int test_read(Bus* bus, uint32_t addr, uint32_t value) {
+    int result = 0;
     uint32_t orig_addr = addr;
 
     uint32_t read_value_32 = bus_read32(bus, addr);
-    assert(read_value_32 == value && "bus_read32 failed");
+    if (read_value_32 != value) {
+        fprintf(stderr, "bus_read32 failed at address 0x%08X: expected 0x%08X, got 0x%08X\n", addr, value, read_value_32);
+        result = 1;
+    }
 
     uint16_t read_value_16 = bus_read16(bus, addr);
-    assert(read_value_16 == (uint16_t)(value & 0xFFFF) && "bus_read16 failed");
+    if (read_value_16 != (uint16_t)(value & 0xFFFF)) {
+        fprintf(stderr, "bus_read16 failed at address 0x%08X: expected 0x%04X, got 0x%04X\n", addr, (uint16_t)(value & 0xFFFF), read_value_16);
+        result = 1;
+    }
 
     addr += 2; // Move to the next 16-bit boundary
     read_value_16 = bus_read16(bus, addr);
-    assert(read_value_16 == (uint16_t)((value >> 16) & 0xFFFF) && "bus_read16 failed");
+    if (read_value_16 != (uint16_t)((value >> 16) & 0xFFFF)) {
+        fprintf(stderr, "bus_read16 failed at address 0x%08X: expected 0x%04X, got 0x%04X\n", addr, (uint16_t)((value >> 16) & 0xFFFF), read_value_16);
+        result = 1;
+    }
 
     addr = orig_addr; // Reset to original address
     uint8_t read_value_8 = bus_read8(bus, addr);
-    assert(read_value_8 == (uint8_t)(value & 0xFF) && "bus_read8 failed");
+    if (read_value_8 != (uint8_t)(value & 0xFF)) {
+        fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)(value & 0xFF), read_value_8);
+        result = 1;
+    }
 
     addr += 1; // Move to the next 8-bit boundary
     read_value_8 = bus_read8(bus, addr);
-    assert(read_value_8 == (uint8_t)((value >> 8) & 0xFF) && "bus_read8 failed");
+    if (read_value_8 != (uint8_t)((value >> 8) & 0xFF)) {
+        fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 8) & 0xFF), read_value_8);
+        result = 1;
+    }
 
     addr += 1; // Move to the next 8-bit boundary
     read_value_8 = bus_read8(bus, addr);
-    assert(read_value_8 == (uint8_t)((value >> 16) & 0xFF) && "bus_read8 failed");
+    if (read_value_8 != (uint8_t)((value >> 16) & 0xFF)) {
+        fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 16) & 0xFF), read_value_8);
+        result = 1;
+    }
 
     addr += 1; // Move to the next 8-bit boundary
     read_value_8 = bus_read8(bus, addr);
-    assert(read_value_8 == (uint8_t)((value >> 24) & 0xFF) && "bus_read8 failed");
+    if (read_value_8 != (uint8_t)((value >> 24) & 0xFF)) {
+        fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 24) & 0xFF), read_value_8);
+        result = 1;
+    }
 
-    return 0;
+    return result;
 }
 
 int test_read_all_segments(Bus* bus, uint32_t addr, uint32_t value) {
+    int result = 0;
+
     // Test KUSEG
     printf("Testing KUSEG at address 0x%08X with value 0x%08X\n", addr, value);
-    test_read(bus, addr, value);
+    result |= test_read(bus, addr, value);
 
     // Test KSEG0
     printf("Testing KSEG0 at address 0x%08X with value 0x%08X\n", addr | KSEG0_VIRT_START, value);
     uint32_t kseg0_addr = addr | KSEG0_VIRT_START;
-    test_read(bus, kseg0_addr, value);
+    result |= test_read(bus, kseg0_addr, value);
 
     // Test KSEG1
     printf("Testing KSEG1 at address 0x%08X with value 0x%08X\n", addr | KSEG1_VIRT_START, value);
     uint32_t kseg1_addr = addr | KSEG1_VIRT_START;
-    test_read(bus, kseg1_addr, value);
+    result |= test_read(bus, kseg1_addr, value);
 
-    return 0;
+    return result;
 }
 
 int test_ram(Bus* bus) {
+    int result = 0;
+
     uint32_t addr1 = 0x00000000;
     uint32_t value1 = 0x12345678;
 
@@ -70,11 +95,11 @@ int test_ram(Bus* bus) {
     bus_write32(bus, addr2, value2);
     bus_write32(bus, addr3, value3);
 
-    test_read_all_segments(bus, addr1, value1);
-    test_read_all_segments(bus, addr2, value2);
-    test_read_all_segments(bus, addr3, value3);
+    result |= test_read_all_segments(bus, addr1, value1);
+    result |= test_read_all_segments(bus, addr2, value2);
+    result |= test_read_all_segments(bus, addr3, value3);
 
-    return 0;
+    return result;
 }
 
 int test_exp1(Bus* bus) {
@@ -87,10 +112,11 @@ int test_exp1(Bus* bus) {
     bus_write32(bus, addr1, value1);
     bus_write32(bus, addr2, value2);
 
-    test_read_all_segments(bus, addr1, value1);
-    test_read_all_segments(bus, addr2, value2);
+    int result = 0;
+    result |= test_read_all_segments(bus, addr1, value1);
+    result |= test_read_all_segments(bus, addr2, value2);
 
-    return 0;
+    return result;
 }
 
 int test_scratchpad(Bus* bus) {
@@ -103,10 +129,11 @@ int test_scratchpad(Bus* bus) {
     bus_write32(bus, addr1, value1);
     bus_write32(bus, addr2, value2);
 
-    test_read_all_segments(bus, addr1, value1);
-    test_read_all_segments(bus, addr2, value2);
+    int result = 0;
+    result |= test_read_all_segments(bus, addr1, value1);
+    result |= test_read_all_segments(bus, addr2, value2);
 
-    return 0;
+    return result;
 }
 
 int test_bios(Bus* bus) {
@@ -119,30 +146,32 @@ int test_bios(Bus* bus) {
     bus_write32(bus, addr1, value1);
     bus_write32(bus, addr2, value2);
 
-    test_read_all_segments(bus, addr1, value1);
-    test_read_all_segments(bus, addr2, value2);
+    int result = 0;
+    result |= test_read_all_segments(bus, addr1, value1);
+    result |= test_read_all_segments(bus, addr2, value2);
 
-    return 0;
+    return result;
 }
 
 int main(int argc, char** argv) {
     Bus *bus = create_bus();
 
     const char *test_type = argc > 1 ? argv[1] : "all";
+    int result = 0;
 
     if (strcmp(test_type, "ram") == 0) {
-        test_ram(bus);
+        result = test_ram(bus);
     } else if (strcmp(test_type, "exp1") == 0) {
-        test_exp1(bus);
+        result = test_exp1(bus);
     } else if (strcmp(test_type, "scratchpad") == 0) {
-        test_scratchpad(bus);
+        result = test_scratchpad(bus);
     } else if (strcmp(test_type, "bios") == 0) {
-        test_bios(bus);
+        result = test_bios(bus);
     } else if (strcmp(test_type, "all") == 0) {
-        test_ram(bus);
-        test_exp1(bus);
-        test_scratchpad(bus);
-        test_bios(bus);
+        result |= test_ram(bus);
+        result |= test_exp1(bus);
+        result |= test_scratchpad(bus);
+        result |= test_bios(bus);
     } else {
         printf("Unknown test type: %s\n", test_type);
         destroy_bus(bus);
@@ -150,5 +179,5 @@ int main(int argc, char** argv) {
     }
 
     destroy_bus(bus);
-    return 0;
+    return result;
 }
