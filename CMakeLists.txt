@@ -6,7 +6,8 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-add_library(psxy_core
+add_executable(psxy
+    src/main.c
     src/bus.c
     src/cpu.c
     src/exceptions.c
@@ -14,18 +15,19 @@ add_library(psxy_core
     src/loader.c
 )
 
-target_include_directories(psxy_core PUBLIC src)
+target_include_directories(psxy PRIVATE src)
 
-target_compile_options(psxy_core PRIVATE
+target_compile_options(psxy PRIVATE
     -Wall
     -Wextra
     -Wshadow
     -Wstrict-prototypes
     -Wmissing-prototypes
-)
 
-add_executable(psxy src/main.c)
-target_link_libraries(psxy PRIVATE psxy_core)
+    -O3
+    -g
+    -fno-omit-frame-pointer
+)
 
 enable_testing()
 add_subdirectory(tests)

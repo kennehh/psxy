@@ -678,8 +678,15 @@ static inline void cpu_finish_step(Cpu *cpu) {
     cpu->pc = get_next_pc(cpu);
     cpu->next_pc = cpu->pc + 4;
     cpu->branch_taken = cpu->next_branch_taken;
-    cpu->branch_target = cpu->next_branch_target;
     cpu->in_delay_slot = cpu->next_delay_slot;
+
+#ifdef SINGLE_STEP_TEST_MODE
+    cpu->branch_target = cpu->next_branch_target;
+#else
+    if (cpu->in_delay_slot) {
+        cpu->branch_target = cpu->next_branch_target;
+    }
+#endif
 }
 
 uint32_t cpu_step(Cpu *cpu, Bus *bus) {

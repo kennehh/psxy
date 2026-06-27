@@ -14,7 +14,7 @@
 
 void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t instructions_executed = 0;
-    uint32_t max_steps = 7538292;
+    uint32_t max_steps = 8000000;
 
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);

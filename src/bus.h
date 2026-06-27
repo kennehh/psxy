@@ -44,7 +44,7 @@ Bus* bus_create(void);
 void bus_destroy(Bus *bus);
 void bus_reset(Bus *bus);
 
-#ifdef USE_SINGLE_STEP_BUS
+#ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"
 #else
 
@@ -173,5 +173,5 @@ static inline void bus_write32(Bus *bus, uint32_t addr, uint32_t value) {
     memcpy(page_ptr + offset, &value, sizeof(uint32_t));
 }
 
-#endif // USE_SINGLE_STEP_BUS
+#endif // SINGLE_STEP_TEST_MODE
 #endif // BUS_H
