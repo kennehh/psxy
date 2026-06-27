@@ -111,31 +111,28 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t rt = reg_read(cpu, RT(cpu)); \
-    cpu->next_delay_slot = true; \
+    cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
     cpu->next_branch_target = get_next_pc(cpu) + (SIMM_EXT(cpu) << 2); \
-    cpu->next_branch_taken = condition; \
 }
 
 #define OP_I_BRANCH_Z(name, condition) \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
-    cpu->next_delay_slot = true; \
     cpu->next_branch_target = get_next_pc(cpu) + (SIMM_EXT(cpu) << 2); \
-    cpu->next_branch_taken = condition; \
+    cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
 }
 
 #define OP_I_BRANCH_Z_LINK(name, condition) \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t pc = get_next_pc(cpu); \
-    cpu->next_delay_slot = true; \
     cpu->next_branch_target = pc + (SIMM_EXT(cpu) << 2); \
-    cpu->next_branch_taken = condition; \
+    cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
     reg_write(cpu, 31, pc + 4); \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
-    if (cpu->branch_taken) {
+    if (cpu->branch_state == BRANCH_STATE_TAKEN) {
         return cpu->branch_target;
     }
     return cpu->next_pc;
@@ -251,9 +248,8 @@ OP_I_BRANCH_Z_LINK(bltzal, (int32_t)rs < 0)
 
 static inline void execute_jr(Cpu *cpu, Bus *bus) {
     uint32_t target = reg_read(cpu, RS(cpu));
-    cpu->next_branch_taken = true;
     cpu->next_branch_target = target;
-    cpu->next_delay_slot = true;
+    cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
 
 static inline void execute_jalr(Cpu *cpu, Bus *bus) {
@@ -343,18 +339,16 @@ static inline void execute_sub(Cpu *cpu, Bus *bus) {
 static inline void execute_j(Cpu *cpu, Bus *bus) {
     uint32_t pc = get_next_pc(cpu);
     uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
-    cpu->next_branch_taken = true;
     cpu->next_branch_target = target;
-    cpu->next_delay_slot = true;
+    cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
 
 static inline void execute_jal(Cpu *cpu, Bus *bus) {
     uint32_t pc = get_next_pc(cpu);
     uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
     reg_write(cpu, 31, pc + 4); // Save return address in $ra
-    cpu->next_branch_taken = true;
     cpu->next_branch_target = target;
-    cpu->next_delay_slot = true;
+    cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
 
 
@@ -645,9 +639,8 @@ static inline void execute_instruction(Cpu *cpu, Bus *bus) {
 static inline void cpu_begin_step(Cpu *cpu) {
     cpu->inst = 0;
     cpu->next_exc_code = 0;
-    cpu->next_branch_taken = false;
+    cpu->next_branch_state = BRANCH_STATE_NO_DELAY;
     cpu->next_branch_target = 0;
-    cpu->next_delay_slot = false;
     cpu->next_load_reg = 0;
     cpu->next_load_value = 0;
 }
@@ -677,16 +670,15 @@ static inline void cpu_finish_step(Cpu *cpu) {
 
     cpu->pc = get_next_pc(cpu);
     cpu->next_pc = cpu->pc + 4;
-    cpu->branch_taken = cpu->next_branch_taken;
-    cpu->in_delay_slot = cpu->next_delay_slot;
+    cpu->branch_state = cpu->next_branch_state;
 
-#ifdef SINGLE_STEP_TEST_MODE
-    cpu->branch_target = cpu->next_branch_target;
-#else
-    if (cpu->in_delay_slot) {
+    #ifdef SINGLE_STEP_TEST_MODE
         cpu->branch_target = cpu->next_branch_target;
-    }
-#endif
+    #else
+        if (cpu->branch_state & BRANCH_STATE_IN_DELAY_SLOT) {
+            cpu->branch_target = cpu->next_branch_target;
+        }
+    #endif
 }
 
 uint32_t cpu_step(Cpu *cpu, Bus *bus) {

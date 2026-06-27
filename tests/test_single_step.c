@@ -101,8 +101,8 @@ void set_state_from_cpu(State *state, Cpu *cpu) {
     state->CAUSE = cpu->cop0.cause;
     state->PC = cpu->pc;
 
-    state->delay.load_slot = cpu->in_delay_slot;
-    state->delay.load_take = cpu->branch_taken;
+    state->delay.load_slot = cpu->branch_state & BRANCH_STATE_IN_DELAY_SLOT;
+    state->delay.load_take = cpu->branch_state == BRANCH_STATE_TAKEN;
     state->delay.load_target = cpu->branch_target;
     state->delay.branch_target = cpu->load_reg;
     state->delay.branch_val = cpu->load_value;
@@ -120,8 +120,7 @@ void set_cpu_from_state(Cpu *cpu, State *state) {
     cpu->next_pc = state->PC + 4;
     cpu->next_exc_code = 0; // Clear any pending exception code
 
-    cpu->in_delay_slot = state->delay.load_slot;
-    cpu->branch_taken = state->delay.load_take;
+    cpu->branch_state = state->delay.load_slot | (state->delay.load_take << 1);
     cpu->branch_target = state->delay.load_target;
     cpu->next_load_reg = 0;
     cpu->next_load_value = 0;

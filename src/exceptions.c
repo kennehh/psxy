@@ -14,12 +14,12 @@ void raise_exception(Cpu *cpu, uint8_t exc_code) {
     }
 
     cpu->cop0.epc = cpu->pc; // Save the current program counter to the EPC register
-    if (cpu->in_delay_slot) {
+    if (cpu->branch_state & BRANCH_STATE_IN_DELAY_SLOT) {
         cause |= CAUSE_BD_MASK; // Set the branch delay bit if the exception occurred in a delay slot
         cpu->cop0.tar = cpu->branch_target; // Save the branch target address to the TAR register
         cpu->cop0.epc -= 4; // Adjust the EPC to point to the instruction before the delay slot
 
-        if (cpu->branch_taken) {
+        if (cpu->branch_state == BRANCH_STATE_TAKEN) {
             cause |= CAUSE_BT_MASK; // Set the branch taken bit if a branch was taken
         }
     }
@@ -33,9 +33,8 @@ void raise_exception(Cpu *cpu, uint8_t exc_code) {
     cpu->cop0.cause = cause; // Update the Cause register with the new value
 
     // reset CPU state for exception handling
-    cpu->branch_taken = false;
     cpu->branch_target = 0;
-    cpu->in_delay_slot = false;
+    cpu->branch_state = BRANCH_STATE_NO_DELAY;
     cpu->pc = 0x80000080; // Set the program counter to the exception handler address
     cpu->next_pc = 0x80000084;
 }
