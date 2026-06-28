@@ -132,7 +132,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
-    if (unlikely(IS_BRANCH_TAKEN(cpu->branch_state))) {
+    if (IS_BRANCH_TAKEN(cpu->branch_state)) {
         return cpu->branch_target;
     }
     return cpu->next_pc;

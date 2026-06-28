@@ -47,9 +47,9 @@ typedef struct {
 
     uint8_t next_exc_code; // next exception code to raise
 
-    Cop0 cop0; // coprocessor 0 state
-
     uint32_t inst; // current instruction
+
+    Cop0 cop0; // coprocessor 0 state
 } Cpu;
 
 Cpu* cpu_create(void);
