@@ -2,6 +2,7 @@
 #include <string.h>
 #include "cpu.h"
 #include "exceptions.h"
+#include "common.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)
@@ -14,8 +15,7 @@
 #define SIMM_EXT(cpu) ((uint32_t)(int16_t)(cpu->inst & 0xFFFF))
 #define TARGET(cpu) (cpu->inst & 0x3FFFFFF)
 
-#define ADD_OVERFLOW_CHECK(a, b, result) (((a ^ result) & (b ^ result) & 0x80000000) != 0)
-#define SUB_OVERFLOW_CHECK(a, b, result) (((a ^ b) & (a ^ result) & 0x80000000) != 0)
+#define IS_CACHE_ISOLATED(status) (unlikely((status) & 0x00010000))
 
 #define OPCODE_TABLE \
     X(0x01, bcond) \
@@ -132,7 +132,7 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
-    if (IS_BRANCH_TAKEN(cpu->branch_state)) {
+    if (unlikely(IS_BRANCH_TAKEN(cpu->branch_state))) {
         return cpu->branch_target;
     }
     return cpu->next_pc;
@@ -165,26 +165,22 @@ static inline void reg_write(Cpu *cpu, uint8_t reg, uint32_t value) {
     cpu->r[reg] = value;
 }
 
-static inline bool is_cache_isolated(uint32_t status) {
-    return (status & 0x00010000) != 0; // Check the KSU bits for cache isolation
-}
-
 static inline void cpu_write8(Cpu *cpu, Bus *bus, uint32_t addr, uint8_t value) {
-    if (is_cache_isolated(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
     bus_write8(bus, addr, value);
 }
 
 static inline void cpu_write16(Cpu *cpu, Bus *bus, uint32_t addr, uint16_t value) {
-    if (is_cache_isolated(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
     bus_write16(bus, addr, value);
 }
 
 static inline void cpu_write32(Cpu *cpu, Bus *bus, uint32_t addr, uint32_t value) {
-    if (is_cache_isolated(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
     bus_write32(bus, addr, value);
@@ -211,6 +207,14 @@ static inline uint32_t get_addr_from_imm(Cpu *cpu) {
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     return base + offset;
+}
+
+static inline bool add_overflow_check(uint32_t a, uint32_t b, uint32_t result) {
+    return ((a ^ result) & (b ^ result) & 0x80000000) != 0;
+}
+
+static inline bool sub_overflow_check(uint32_t a, uint32_t b, uint32_t result) {
+    return ((a ^ b) & (a ^ result) & 0x80000000) != 0;
 }
 
 OP_R_SHAMT(sll, value << SHAMT(cpu))
@@ -317,7 +321,7 @@ static inline void execute_add(Cpu *cpu, Bus *bus) {
     uint32_t rt = reg_read(cpu, RT(cpu));
     uint32_t result = rs + rt;
     // Check for signed overflow
-    if (ADD_OVERFLOW_CHECK(rs, rt, result)) {
+    if (add_overflow_check(rs, rt, result)) {
         cpu->next_exc_code = EXC_OV; // Set exception code for overflow
     } else {
         reg_write(cpu, RD(cpu), result);
@@ -329,7 +333,7 @@ static inline void execute_sub(Cpu *cpu, Bus *bus) {
     uint32_t rt = reg_read(cpu, RT(cpu));
     uint32_t result = rs - rt;
     // Check for signed overflow
-    if (SUB_OVERFLOW_CHECK(rs, rt, result)) {
+    if (sub_overflow_check(rs, rt, result)) {
         cpu->next_exc_code = EXC_OV; // Set exception code for overflow
     } else {
         reg_write(cpu, RD(cpu), result);
@@ -357,7 +361,7 @@ static inline void execute_addi(Cpu *cpu, Bus *bus) {
     int16_t simm = SIMM(cpu);
     uint32_t result = rs + simm;
     // Check for signed overflow
-    if (ADD_OVERFLOW_CHECK(rs, simm, result)) {
+    if (add_overflow_check(rs, simm, result)) {
         cpu->next_exc_code = EXC_OV; // Set exception code for overflow
     } else {
         reg_write(cpu, RT(cpu), result);
@@ -384,7 +388,7 @@ static inline void execute_lh(Cpu *cpu, Bus *bus) {
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
-    if (addr & 1) {
+    if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
@@ -394,7 +398,7 @@ static inline void execute_lh(Cpu *cpu, Bus *bus) {
 
 static inline void execute_lhu(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
-    if (addr & 1) {
+    if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
@@ -404,7 +408,7 @@ static inline void execute_lhu(Cpu *cpu, Bus *bus) {
 
 static inline void execute_lw(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
-    if (addr & 3) {
+    if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
@@ -486,7 +490,7 @@ static inline void execute_sb(Cpu *cpu, Bus *bus) {
 
 static inline void execute_sh(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
-    if (addr & 1) {
+    if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
@@ -496,7 +500,7 @@ static inline void execute_sh(Cpu *cpu, Bus *bus) {
 
 static inline void execute_sw(Cpu *cpu, Bus *bus) {
     uint32_t addr = get_addr_from_imm(cpu);
-    if (addr & 3) {
+    if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
@@ -648,15 +652,6 @@ static inline void cpu_begin_step(Cpu *cpu) {
 #endif
 }
 
-static inline bool cpu_fetch(Cpu *cpu, Bus *bus) {
-    if (cpu->pc & 3) {
-        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
-        return false;
-    }
-    cpu->inst = bus_fetch32(bus, cpu->pc);
-    return true;
-}
-
 static inline void cpu_execute(Cpu *cpu, Bus *bus) {
     execute_instruction(cpu, bus);
 }
@@ -664,7 +659,7 @@ static inline void cpu_execute(Cpu *cpu, Bus *bus) {
 static inline void cpu_finish_step(Cpu *cpu) {
     commit_load(cpu); // Commit any scheduled load after executing the instruction
 
-    if (cpu->next_exc_code != EXC_NONE) {
+    if (unlikely(cpu->next_exc_code != EXC_NONE)) {
         raise_exception(cpu, cpu->next_exc_code);
         return;
     }
@@ -685,10 +680,14 @@ static inline void cpu_finish_step(Cpu *cpu) {
 
 uint32_t cpu_step(Cpu *cpu, Bus *bus) {
     cpu_begin_step(cpu);
-    if (!cpu_fetch(cpu, bus)) {
+
+    if (unlikely(cpu->pc & 3)) {
+        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         cpu_finish_step(cpu);
         return cpu->pc;
     }
+
+    cpu->inst = bus_fetch32(bus, cpu->pc);
     cpu_execute(cpu, bus);
     cpu_finish_step(cpu);
     return cpu->pc;
