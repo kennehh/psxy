@@ -4,7 +4,7 @@
 #include "cpu.h"
 #include <stdlib.h>
 
-#define TTY_BUFFER_SIZE 256
+#define TTY_BUFFER_SIZE 128
 
 typedef struct {
     char buffer[TTY_BUFFER_SIZE];
@@ -15,7 +15,7 @@ typedef struct {
 TTY *tty_create(void);
 void tty_destroy(TTY *tty);
 void tty_reset(TTY *tty);
-void tty_putchar(TTY *tty, Cpu *cpu);
 void tty_maybe_putchar(TTY *tty, Cpu *cpu);
+void tty_maybe_printf(TTY *tty, Cpu *cpu, Bus* bus);
 
 #endif // TTY_H

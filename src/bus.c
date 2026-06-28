@@ -41,7 +41,26 @@ Bus* bus_create(void) {
     init_buffer(&bus->bios, BIOS_SIZE);
     map_buffer(bus, bus->bios, BIOS_PHYS_START, BIOS_PHYS_END);
 
+    bus_reset(bus);
     return bus;
+}
+
+void bus_install_bios_trampolines(Bus *bus) {
+    bus_write32(bus, 0xA0, 0x03E00008); // jr $ra
+    bus_write32(bus, 0xA4, 0x00000000);
+    bus_write32(bus, 0xB0, 0x03E00008); // jr $ra
+    bus_write32(bus, 0xB4, 0x00000000);
+    bus_write32(bus, 0xC0, 0x03E00008); // jr $ra
+    bus_write32(bus, 0xC4, 0x00000000);
+}
+
+void bus_clear_bios_trampolines(Bus *bus) {
+    bus_write32(bus, 0xA0, 0x00000000);
+    bus_write32(bus, 0xA4, 0x00000000);
+    bus_write32(bus, 0xB0, 0x00000000);
+    bus_write32(bus, 0xB4, 0x00000000);
+    bus_write32(bus, 0xC0, 0x00000000);
+    bus_write32(bus, 0xC4, 0x00000000);
 }
 
 void bus_reset(Bus *bus) {
@@ -51,6 +70,7 @@ void bus_reset(Bus *bus) {
     memset(bus->exp1, 0, EXP1_SIZE);
     memset(bus->scratchpad, 0, SCRATCHPAD_SIZE);
     memset(bus->bios, 0, BIOS_SIZE);
+    bus_install_bios_trampolines(bus);
 }
 
 void bus_destroy(Bus *bus) {

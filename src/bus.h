@@ -43,6 +43,8 @@ typedef struct {
 Bus* bus_create(void);
 void bus_destroy(Bus *bus);
 void bus_reset(Bus *bus);
+void bus_install_bios_trampolines(Bus *bus);
+void bus_clear_bios_trampolines(Bus *bus);
 
 #ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"

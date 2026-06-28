@@ -12,7 +12,7 @@
 #define MAX_STEPS 10000000
 #define TARGET_PC 0x80030000
 
-void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
+static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t instructions_executed = 0;
     uint32_t max_steps = 8000000;
 
@@ -20,7 +20,7 @@ void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     while (max_steps-- > 0) {
-        // tty_maybe_putchar(tty, cpu);
+        tty_maybe_putchar(tty, cpu);
         cpu_step(cpu, bus);
         // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
         instructions_executed++;
@@ -38,9 +38,10 @@ void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     printf("MIPS: %.2f\n", mips);
 }
 
-void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
+static void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t steps = 0;
     while (steps++ < MAX_STEPS) {
+        tty_maybe_putchar(tty, cpu);
         cpu_step(cpu, bus);
         if (cpu->pc == TARGET_PC) {
             break;
@@ -48,16 +49,16 @@ void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
     }
 }
 
-int main() {
+int main(void) {
     Bus* bus = bus_create();
     Cpu* cpu = cpu_create();
     TTY* tty = tty_create();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         bus_reset(bus);
         cpu_reset(cpu);
         tty_reset(tty);
-        load_bios(bus, "roms/SCPH1001.BIN");
+        load_bios(bus, "roms/openbios.bin");
         run_until_kernel_init(cpu, bus, tty);
         load_exe(cpu, bus, "roms/psxtest_cpu.exe");
 

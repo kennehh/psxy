@@ -24,7 +24,7 @@ target_compile_options(psxy PRIVATE
     -Wstrict-prototypes
     -Wmissing-prototypes
 
-    -O3
+    # -O3
     -g
     -fno-omit-frame-pointer
 )

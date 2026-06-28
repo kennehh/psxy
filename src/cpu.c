@@ -132,10 +132,9 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
-    if (IS_BRANCH_TAKEN(cpu->branch_state)) {
-        return cpu->branch_target;
-    }
-    return cpu->next_pc;
+    uint32_t taken = (uint32_t)IS_BRANCH_TAKEN(cpu->branch_state);
+    uint32_t mask = 0u - taken; // 0x00000000 or 0xFFFFFFFF
+    return cpu->next_pc ^ ((cpu->next_pc ^ cpu->branch_target) & mask);
 }
 
 static inline uint32_t reg_read(Cpu *cpu, uint8_t reg) {
@@ -708,6 +707,7 @@ void cpu_reset(Cpu *cpu) {
     cpu->pc = 0xBFC00000; // Reset the program counter to the reset vector
     cpu->next_pc = cpu->pc + 4;
     cpu->next_exc_code = EXC_NONE;
+    cpu->cop0.prid = 0x2;
 }
 
 void cpu_destroy(Cpu *cpu) {
