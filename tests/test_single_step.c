@@ -8,7 +8,7 @@
 #include <json-c/json.h>
 #include <stdbool.h>
 #include <string.h>
-#include <dirent.h>
+// #include <dirent.h>
 
 #define ACTION_READ 0x01
 #define ACTION_WRITE 0x02
@@ -164,12 +164,12 @@ int test_file(const char *filename, Cpu *cpu) {
         return 1;
     }
 
-    char *line = NULL;
+    char line[4096];
     size_t len = 0;
     size_t line_count = 0;
     int read;
 
-    while ((read = getline(&line, &len, jsonl_file)) != -1) {
+    while (fgets(line, sizeof(line), jsonl_file)) {
         line_count++;
         struct json_object *parsed_json = json_tokener_parse(line);
         if (!parsed_json) {
@@ -252,8 +252,6 @@ int test_file(const char *filename, Cpu *cpu) {
     }
 
     printf("All tests passed for file: %s\n", filename);
-
-    free(line);
     fclose(jsonl_file);
 }
 

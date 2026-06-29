@@ -78,7 +78,7 @@ static inline char* arg_string(TTY *tty, Cpu* cpu, Bus* bus, uint8_t arg_idx, si
     uint32_t str_addr = get_arg_value(cpu, bus, arg_idx);
     static char buffer[TTY_BUFFER_SIZE];
 
-    for (int i = 0; i < max_length; i++) {
+    for (size_t i = 0; i < max_length; i++) {
         char c = bus_read8(bus, str_addr + i);
         buffer[i] = c;
         if (c == '\0') {
@@ -215,7 +215,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
     }
 }
 
-inline void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
+void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
     uint32_t pc = physical_address(cpu->pc);
     uint8_t func_code = cpu->r[9] & 0xFF;
     uint32_t pc_func = (pc << 8) | func_code;
@@ -231,7 +231,7 @@ inline void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
     }
 }
 
-inline void tty_maybe_printf(TTY *tty, Cpu *cpu, Bus* bus) {
+void tty_maybe_printf(TTY *tty, Cpu *cpu, Bus* bus) {
     uint32_t pc = physical_address(cpu->pc);
     uint8_t func_code = cpu->r[9] & 0xFF;
     uint32_t pc_func = (pc << 8) | func_code;

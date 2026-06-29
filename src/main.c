@@ -6,7 +6,7 @@
 #include "cpu.h"
 #include "loader.h"
 #include "tty.h"
-#include <time.h>
+#include "hrtime.h"
 #include <string.h>
 
 #define MAX_STEPS 10000000
@@ -16,22 +16,18 @@ static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t instructions_executed = 0;
     uint32_t max_steps = 8000000;
 
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    uint64_t start = get_time_ns();
 
     while (max_steps-- > 0) {
-        tty_maybe_putchar(tty, cpu);
+        // tty_maybe_putchar(tty, cpu);
         cpu_step(cpu, bus);
         // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
         instructions_executed++;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    uint64_t end = get_time_ns();
 
-    long seconds = end.tv_sec - start.tv_sec;
-    long nanoseconds = end.tv_nsec - start.tv_nsec;
-    double elapsed_ms = (seconds * 1000.0) + (nanoseconds / 1000000.0);
-
+    double elapsed_ms = (end - start) / 1000000.0;
     printf("Instructions executed: %u\n", instructions_executed);
     printf("Elapsed time: %.2f ms\n", elapsed_ms);
     double mips = instructions_executed / (elapsed_ms * 1e-3) / 1e6;
@@ -41,7 +37,7 @@ static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
 static void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
     uint32_t steps = 0;
     while (steps++ < MAX_STEPS) {
-        tty_maybe_putchar(tty, cpu);
+        // tty_maybe_putchar(tty, cpu);
         cpu_step(cpu, bus);
         if (cpu->pc == TARGET_PC) {
             break;
@@ -54,7 +50,7 @@ int main(void) {
     Cpu* cpu = cpu_create();
     TTY* tty = tty_create();
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         bus_reset(bus);
         cpu_reset(cpu);
         tty_reset(tty);

@@ -19,10 +19,10 @@ target_include_directories(psxy PRIVATE src)
 
 target_compile_options(psxy PRIVATE
     -Wall
-    -Wextra
-    -Wshadow
-    -Wstrict-prototypes
-    -Wmissing-prototypes
+    # -Wextra
+    # -Wshadow
+    # -Wstrict-prototypes
+    # -Wmissing-prototypes
 
     # -O3
     -g
