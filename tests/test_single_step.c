@@ -273,6 +273,7 @@ int main(int argc, char *argv[]) {
     free(initial);
     free(final);
     free(actual);
+    cpu_destroy(cpu);
 
     return 0;
 }

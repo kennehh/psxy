@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
-#include "cpu.h"
+
+#include "bus.h"
 #include "exceptions.h"
 #include "common.h"
+#include "cpu.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)
@@ -99,9 +101,16 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     cpu->next_exc_code = exc_code; \
 }
 
-#define OP_I(name, expr) \
+#define OP_I_RS(name, expr) \
 static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
+    uint16_t imm = IMM(cpu); \
+    uint32_t result = expr; \
+    reg_write(cpu, RT(cpu), result); \
+}
+
+#define OP_I(name, expr) \
+static inline void execute_##name(Cpu *cpu, Bus *bus) { \
     uint16_t imm = IMM(cpu); \
     uint32_t result = expr; \
     reg_write(cpu, RT(cpu), result); \
@@ -233,12 +242,12 @@ OP_R(nor, ~(rs | rt))
 OP_R(slt, (int32_t)rs < (int32_t)rt ? 1 : 0)
 OP_R(sltu, rs < rt ? 1 : 0)
 
-OP_I(addiu, rs + (int16_t)imm)
-OP_I(andi, rs & imm)
-OP_I(ori, rs | imm)
-OP_I(xori, rs ^ imm)
-OP_I(slti, (int32_t)rs < (int16_t)imm ? 1 : 0)
-OP_I(sltiu, rs < (uint32_t)(int16_t)imm ? 1 : 0)
+OP_I_RS(addiu, rs + (int16_t)imm)
+OP_I_RS(andi, rs & imm)
+OP_I_RS(ori, rs | imm)
+OP_I_RS(xori, rs ^ imm)
+OP_I_RS(slti, (int32_t)rs < (int16_t)imm ? 1 : 0)
+OP_I_RS(sltiu, rs < (uint32_t)(int16_t)imm ? 1 : 0)
 OP_I(lui, imm << 16)
 OP_I_BRANCH_RT(beq, rs == rt)
 OP_I_BRANCH_RT(bne, rs != rt)

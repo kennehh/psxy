@@ -1,8 +1,8 @@
 #ifndef TTY_H
 #define TTY_H
 
-#include "cpu.h"
 #include <stdlib.h>
+#include "cpu.h"
 
 #define TTY_BUFFER_SIZE 128
 

@@ -17,7 +17,6 @@ void load_bios(Bus *bus, const char *bios_path) {
     }
 
     bus_clear_bios_trampolines(bus);
-    memcpy(bus->page_table[BIOS_PHYS_START >> BUS_PAGE_SHIFT], bus->bios, BIOS_SIZE);
     fclose(bios_file);
 }
 

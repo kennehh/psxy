@@ -1,12 +1,16 @@
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include "bus.h"
 
-static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr) {
+static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
         uint32_t page = addr >> BUS_PAGE_SHIFT;
-        bus->page_table[page] = buffer + (addr - start_phys_addr);
+        bus->read_pages[page] = buffer + (addr - start_phys_addr);
+        if (!read_only) {
+            bus->write_pages[page] = buffer + (addr - start_phys_addr);
+        }
     }
 }
 
@@ -26,20 +30,21 @@ Bus* bus_create(void) {
     }
 
     for (int i = 0; i < BUS_PAGE_COUNT; i++) {
-        bus->page_table[i] = NULL;
+        bus->read_pages[i] = NULL;
+        bus->write_pages[i] = NULL;
     }
 
     init_buffer(&bus->ram, RAM_SIZE);
-    map_buffer(bus, bus->ram, RAM_PHYS_START, RAM_PHYS_END);
+    map_buffer(bus, bus->ram, RAM_PHYS_START, RAM_PHYS_END, false);
 
     init_buffer(&bus->exp1, EXP1_SIZE);
-    map_buffer(bus, bus->exp1, EXP1_PHYS_START, EXP1_PHYS_END);
+    map_buffer(bus, bus->exp1, EXP1_PHYS_START, EXP1_PHYS_END, false);
 
     init_buffer(&bus->scratchpad, SCRATCHPAD_SIZE);
-    map_buffer(bus, bus->scratchpad, SCRATCHPAD_PHYS_START, SCRATCHPAD_PHYS_END);
+    map_buffer(bus, bus->scratchpad, SCRATCHPAD_PHYS_START, SCRATCHPAD_PHYS_END, false);
 
     init_buffer(&bus->bios, BIOS_SIZE);
-    map_buffer(bus, bus->bios, BIOS_PHYS_START, BIOS_PHYS_END);
+    map_buffer(bus, bus->bios, BIOS_PHYS_START, BIOS_PHYS_END, true);
 
     bus_reset(bus);
     return bus;
