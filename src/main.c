@@ -2,17 +2,17 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "bus.h"
-#include "cpu.h"
+#include "psx.h"
 #include "loader.h"
 #include "tty.h"
 #include "hrtime.h"
 #include <string.h>
+#include "bcache.h"
 
 #define MAX_STEPS 10000000
 #define TARGET_PC 0x80030000
 
-static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
+static void benchmark(PSX *psx) {
     uint32_t instructions_executed = 0;
     uint32_t max_steps = 8000000;
 
@@ -20,7 +20,7 @@ static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
 
     while (max_steps-- > 0) {
         // tty_maybe_putchar(tty, cpu);
-        cpu_step(cpu, bus);
+        cpu_step(psx);
         // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
         instructions_executed++;
     }
@@ -34,37 +34,35 @@ static void benchmark(Cpu *cpu, Bus *bus, TTY *tty) {
     printf("MIPS: %.2f\n", mips);
 }
 
-static void run_until_kernel_init(Cpu *cpu, Bus *bus, TTY *tty) {
+static void run_until_kernel_init(PSX *psx) {
     uint32_t steps = 0;
+    BlockCache *cache = bcache_create();
     while (steps++ < MAX_STEPS) {
         // tty_maybe_putchar(tty, cpu);
-        cpu_step(cpu, bus);
-        if (cpu->pc == TARGET_PC) {
+        // cpu_step(cpu, bus);
+        tty_maybe_putchar(psx->tty, psx->cpu);
+        cpu_step_block(psx);
+        if (psx->cpu->pc == TARGET_PC) {
             break;
         }
     }
+    bcache_destroy(cache);
 }
 
 int main(void) {
-    Bus* bus = bus_create();
-    Cpu* cpu = cpu_create();
-    TTY* tty = tty_create();
+    PSX* psx = psx_create();
 
     for (int i = 0; i < 10; i++) {
-        bus_reset(bus);
-        cpu_reset(cpu);
-        tty_reset(tty);
-        load_bios(bus, "roms/openbios.bin");
-        run_until_kernel_init(cpu, bus, tty);
-        load_exe(cpu, bus, "roms/psxtest_cpu.exe");
+        psx_reset(psx);
+        load_bios(psx, "../../roms/openbios.bin");
+        run_until_kernel_init(psx);
+        load_exe(psx, "../../roms/psxtest_cpu.exe");
 
         printf("Benchmark iteration %d\n", i + 1);
-        benchmark(cpu, bus, tty);
+        benchmark(psx);
     }
 
-    tty_destroy(tty);
-    cpu_destroy(cpu);
-    bus_destroy(bus);
+    psx_destroy(psx);
 
     return 0;
 }

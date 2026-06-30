@@ -2,11 +2,11 @@
 #define TTY_H
 
 #include <stdlib.h>
-#include "cpu.h"
+#include "common.h"
 
 #define TTY_BUFFER_SIZE 128
 
-typedef struct {
+typedef struct TTY {
     char buffer[TTY_BUFFER_SIZE];
     size_t buffer_index;
     size_t strlen;
@@ -16,6 +16,6 @@ TTY *tty_create(void);
 void tty_destroy(TTY *tty);
 void tty_reset(TTY *tty);
 void tty_maybe_putchar(TTY *tty, Cpu *cpu);
-void tty_maybe_printf(TTY *tty, Cpu *cpu, Bus* bus);
+void tty_maybe_printf(TTY *tty, PSX *psx);
 
 #endif // TTY_H

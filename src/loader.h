@@ -1,10 +1,9 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include "bus.h"
-#include "cpu.h"
+#include "common.h"
 
-void load_bios(Bus *bus, const char *bios_path);
-void load_exe(Cpu *cpu, Bus *bus, const char *exe_path);
+void load_bios(PSX *psx, const char *bios_path);
+void load_exe(PSX *psx, const char *exe_path);
 
 #endif // LOADER_H

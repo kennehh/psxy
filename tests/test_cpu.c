@@ -1,5 +1,6 @@
 #include "cpu.h"
-#include "bus.h"
+#include "psx.h"
+#include "bus_access.h"
 #include <stdio.h>
 
 #define ITYPE(opcode, rs, rt, imm) (((opcode & 0x3F) << 26) | ((rs & 0x1F) << 21) | ((rt & 0x1F) << 16) | (imm & 0xFFFF))
@@ -7,8 +8,8 @@
 #define ADDIU(rs, rt, imm) ITYPE(0x09, rs, rt, imm)
 
 int main() {
-    Bus* bus = bus_create();
-    Cpu* cpu = cpu_create();
+    PSX *psx = psx_create();
+    Cpu *cpu = psx->cpu;
 
     // should delay LW result by one instruction
     cpu->pc = 0x00000000;
@@ -16,17 +17,17 @@ int main() {
     cpu->r[1] = 0x00002000; // base address for LW
     cpu->r[2] = 0xDEADBEEF; // old value
 
-    bus_write32(bus, 0x00002000, 0xCAFEBABE); // write value to memory
+    bus_write32(psx, 0x00002000, 0xCAFEBABE); // write value to memory
 
     // Write the instructions
-    bus_write32(bus, 0x00000000, LW(1, 2, 0)); // schedules a load of 0xCAFEBABE into $2
-    bus_write32(bus, 0x00000004, ADDIU(2, 3, 1)); // ADDIU $3, $2, 1 (should use old value of $2)
-    bus_write32(bus, 0x00000008, ADDIU(2, 4, 1)); // ADDIU $4, $2, 1 (should use new value of $2)
+    bus_write32(psx, 0x00000000, LW(1, 2, 0)); // schedules a load of 0xCAFEBABE into $2
+    bus_write32(psx, 0x00000004, ADDIU(2, 3, 1)); // ADDIU $3, $2, 1 (should use old value of $2)
+    bus_write32(psx, 0x00000008, ADDIU(2, 4, 1)); // ADDIU $4, $2, 1 (should use new value of $2)
 
     // Step through the instructions
-    cpu_step(cpu, bus); // Execute LW
-    cpu_step(cpu, bus); // Execute first ADDIU
-    cpu_step(cpu, bus); // Execute second ADDIU
+    cpu_step(psx); // Execute LW
+    cpu_step(psx); // Execute first ADDIU
+    cpu_step(psx); // Execute second ADDIU
 
     int result = 0;
 
@@ -44,7 +45,6 @@ int main() {
         result = 1;
     }
 
-    cpu_destroy(cpu);
-    bus_destroy(bus);
+    psx_destroy(psx);
     return result;
 }

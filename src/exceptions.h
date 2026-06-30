@@ -2,8 +2,7 @@
 #define EXCEPTIONS_H
 
 #include <stdint.h>
-#include "cpu.h"
-#include "bus.h"
+#include "common.h"
 
 #define EXC_NONE 0xFF // No exception
 #define EXC_INT  0x00 // Interrupt

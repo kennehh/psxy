@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "bus.h"
+#include "common.h"
 
 #define BRANCH_STATE_NO_DELAY 0b00
 #define BRANCH_STATE_IN_DELAY_SLOT 0b01
@@ -13,7 +13,7 @@
 #define IS_IN_DELAY_SLOT(state) ((state) & BRANCH_STATE_IN_DELAY_SLOT)
 #define IS_NO_DELAY(state) ((state) == BRANCH_STATE_NO_DELAY)
 
-typedef struct {
+typedef struct Cop0 {
     uint32_t bpc; // Breakpoint Program Counter
     uint32_t bda; // Breakpoint Data Address
     uint32_t tar; // Target Address
@@ -26,7 +26,7 @@ typedef struct {
     uint32_t prid; // Processor Revision ID
 } Cop0;
 
-typedef struct {
+typedef struct Cpu {
     uint32_t pc; // program counter
     uint32_t next_pc; // next program counter
 
@@ -56,6 +56,7 @@ Cpu* cpu_create(void);
 void cpu_destroy(Cpu *cpu);
 void cpu_reset(Cpu *cpu);
 
-uint32_t cpu_step(Cpu *cpu, Bus *bus);
+uint32_t cpu_step(PSX *psx);
+void cpu_step_block(PSX *psx);
 
 #endif // CPU_H

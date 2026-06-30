@@ -1,18 +1,15 @@
 #define _GNU_SOURCE
 
 #include "cpu.h"
-#include "bus.h"
+#include "psx.h"
 #include "exceptions.h"
+#include "single_step_bus.h"
 #include <stdio.h>
 #include <assert.h>
 #include <json-c/json.h>
 #include <stdbool.h>
 #include <string.h>
 // #include <dirent.h>
-
-#define ACTION_READ 0x01
-#define ACTION_WRITE 0x02
-#define ACTION_FETCH 0x04
 
 typedef struct {
     uint32_t R[32];
@@ -31,6 +28,7 @@ typedef struct {
 } State;
 
 Cpu* cpu;
+PSX psx;
 State* initial;
 State* final;
 State* actual;
@@ -198,7 +196,7 @@ int test_file(const char *filename, Cpu *cpu) {
 
         set_cpu_from_state(cpu, initial);
 
-        cpu_step(cpu, NULL); // no actual bus needed since we're mocking the bus reads/writes
+        cpu_step(&psx); // no actual bus needed since we're mocking the bus reads/writes
 
         set_state_from_cpu(actual, cpu);
 
@@ -258,6 +256,8 @@ int test_file(const char *filename, Cpu *cpu) {
 
 int main(int argc, char *argv[]) {
     cpu = cpu_create();
+    memset(&psx, 0, sizeof(psx));
+    psx.cpu = cpu;
     initial = malloc(sizeof(State));
     final = malloc(sizeof(State));
     actual = malloc(sizeof(State));

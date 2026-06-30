@@ -8,11 +8,13 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 add_executable(psxy
     src/main.c
+    src/psx.c
     src/bus.c
     src/cpu.c
     src/exceptions.c
     src/tty.c
     src/loader.c
+    src/bcache.c
 )
 
 target_include_directories(psxy PRIVATE src)

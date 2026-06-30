@@ -1,14 +1,15 @@
-#ifndef BLOCK_H
-#define BLOCK_H
+#ifndef BCACHE_H
+#define BCACHE_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
-#include "bus.h"
+#include <stdio.h>
 #include "common.h"
 
 #define BLOCK_SIZE 16 // Number of instructions in a basic block
 
-typedef struct {
+typedef struct BasicBlock {
     bool valid; // Indicates if the block is valid
 
     uint32_t start_pc; // Starting program counter of the basic block
@@ -20,12 +21,12 @@ typedef struct {
     uint32_t page1; // Second page of the basic block
     uint32_t page1_gen; // Generation of the second page of the basic block
 
+    uint32_t instruction_count; // Number of valid instructions in the block
     uint32_t instructions[BLOCK_SIZE]; // Instructions in the basic block
-    uint8_t instruction_count; // Number of valid instructions in the block
 
 } BasicBlock;
 
-typedef struct {
+typedef struct BlockCache {
     BasicBlock *block_page_table[BUS_PAGE_COUNT]; // Page table for basic blocks
     uint32_t block_generation[BUS_PAGE_COUNT]; // Generation numbers for each page
 } BlockCache;
@@ -33,6 +34,15 @@ typedef struct {
 BlockCache *bcache_create();
 void bcache_reset(BlockCache *cache);
 void bcache_destroy(BlockCache *cache);
+
+static inline BasicBlock *bcache_create_block() {
+    BasicBlock *block = (BasicBlock *)calloc(1, sizeof(BasicBlock));
+    if (!block) {
+        fprintf(stderr, "Failed to allocate BasicBlock structure\n");
+        exit(EXIT_FAILURE);
+    }
+    return block;
+}
 
 static inline void bcache_validate_block(BlockCache *cache, BasicBlock *block, uint32_t pc) {
     if (unlikely(!block || !block->valid)) {
@@ -61,9 +71,14 @@ static inline void bcache_validate_block(BlockCache *cache, BasicBlock *block, u
 }
 
 static inline BasicBlock* bcache_get_block(BlockCache *cache, uint32_t pc) {
-    uint32_t page = pc >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(pc);
     BasicBlock *block = cache->block_page_table[page];
-    bcache_validate_block(cache, block, pc);
+    if (!block) {
+        block = bcache_create_block();
+        cache->block_page_table[page] = block;
+    } else {
+        bcache_validate_block(cache, block, pc);
+    }
     return block;
 }
 
@@ -111,4 +126,4 @@ static inline void bcache_invalidate_page_at_addr(BlockCache *cache, uint32_t ad
     cache->block_generation[page] = page_gen;
 }
 
-#endif // BLOCK_H
+#endif // BCACHE_H

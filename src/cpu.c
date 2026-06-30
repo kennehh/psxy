@@ -1,10 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bus.h"
+#include "psx.h"
 #include "exceptions.h"
-#include "common.h"
 #include "cpu.h"
+#ifdef SINGLE_STEP_TEST_MODE
+#include "single_step_bus.h"
+#else
+#include "bus_access.h"
+#endif
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)
@@ -80,9 +84,9 @@
     X(0x2A, slt) \
     X(0x2B, sltu)
 
-
 #define OP_R(name, expr) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t rt = reg_read(cpu, RT(cpu)); \
     uint32_t result = expr; \
@@ -90,19 +94,22 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 #define OP_R_SHAMT(name, expr) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t value = reg_read(cpu, RT(cpu)); \
     uint32_t result = expr; \
     reg_write(cpu, RD(cpu), result); \
 }
 
 #define OP_EXC(name, exc_code) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     cpu->next_exc_code = exc_code; \
 }
 
 #define OP_I_RS(name, expr) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint16_t imm = IMM(cpu); \
     uint32_t result = expr; \
@@ -110,14 +117,16 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 #define OP_I(name, expr) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint16_t imm = IMM(cpu); \
     uint32_t result = expr; \
     reg_write(cpu, RT(cpu), result); \
 }
 
 #define OP_I_BRANCH_RT(name, condition) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t rt = reg_read(cpu, RT(cpu)); \
     cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
@@ -125,14 +134,16 @@ static inline void execute_##name(Cpu *cpu, Bus *bus) { \
 }
 
 #define OP_I_BRANCH_Z(name, condition) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     cpu->next_branch_target = get_next_pc(cpu) + (SIMM_EXT(cpu) << 2); \
     cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
 }
 
 #define OP_I_BRANCH_Z_LINK(name, condition) \
-static inline void execute_##name(Cpu *cpu, Bus *bus) { \
+static inline void execute_##name(PSX *psx) { \
+    Cpu *cpu = psx->cpu; \
     uint32_t rs = reg_read(cpu, RS(cpu)); \
     uint32_t pc = get_next_pc(cpu); \
     cpu->next_branch_target = pc + (SIMM_EXT(cpu) << 2); \
@@ -173,25 +184,28 @@ static inline void reg_write(Cpu *cpu, uint8_t reg, uint32_t value) {
     cpu->r[reg] = value;
 }
 
-static inline void cpu_write8(Cpu *cpu, Bus *bus, uint32_t addr, uint8_t value) {
+static inline void cpu_write8(PSX *psx, uint32_t addr, uint8_t value) {
+    Cpu *cpu = psx->cpu;
     if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
-    bus_write8(bus, addr, value);
+    bus_write8(psx, addr, value);
 }
 
-static inline void cpu_write16(Cpu *cpu, Bus *bus, uint32_t addr, uint16_t value) {
+static inline void cpu_write16(PSX *psx, uint32_t addr, uint16_t value) {
+    Cpu *cpu = psx->cpu;
     if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
-    bus_write16(bus, addr, value);
+    bus_write16(psx, addr, value);
 }
 
-static inline void cpu_write32(Cpu *cpu, Bus *bus, uint32_t addr, uint32_t value) {
+static inline void cpu_write32(PSX *psx, uint32_t addr, uint32_t value) {
+    Cpu *cpu = psx->cpu;
     if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
         return;
     }
-    bus_write32(bus, addr, value);
+    bus_write32(psx, addr, value);
 }
 
 static inline void schedule_load(Cpu *cpu, uint8_t reg, uint32_t value) {
@@ -258,46 +272,55 @@ OP_I_BRANCH_Z(bltz, (int32_t)rs < 0)
 OP_I_BRANCH_Z_LINK(bgezal, (int32_t)rs >= 0)
 OP_I_BRANCH_Z_LINK(bltzal, (int32_t)rs < 0)
 
-static inline void execute_jr(Cpu *cpu, Bus *bus) {
+static inline void execute_jr(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t target = reg_read(cpu, RS(cpu));
     cpu->next_branch_target = target;
     cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
 
-static inline void execute_jalr(Cpu *cpu, Bus *bus) {
-    execute_jr(cpu, bus); // Jump to target address
+static inline void execute_jalr(PSX *psx) {
+    Cpu *cpu = psx->cpu;
+    execute_jr(psx); // Jump to target address
     reg_write(cpu, RD(cpu), get_next_pc(cpu) + 4); // Save return address
 }
 
-static inline void execute_mfhi(Cpu *cpu, Bus *bus) {
+static inline void execute_mfhi(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     reg_write(cpu, RD(cpu), cpu->hi);
 }
 
-static inline void execute_mthi(Cpu *cpu, Bus *bus) {
+static inline void execute_mthi(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     cpu->hi = reg_read(cpu, RS(cpu));
 }
 
-static inline void execute_mflo(Cpu *cpu, Bus *bus) {
+static inline void execute_mflo(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     reg_write(cpu, RD(cpu), cpu->lo);
 }
 
-static inline void execute_mtlo(Cpu *cpu, Bus *bus) {
+static inline void execute_mtlo(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     cpu->lo = reg_read(cpu, RS(cpu));
 }
 
-static inline void execute_mult(Cpu *cpu, Bus *bus) {
+static inline void execute_mult(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     int64_t product = (int64_t)(int32_t)reg_read(cpu, RS(cpu)) * (int64_t)(int32_t)reg_read(cpu, RT(cpu));
     cpu->hi = (uint32_t)(product >> 32);
     cpu->lo = (uint32_t)(product & 0xFFFFFFFF);
 }
 
-static inline void execute_multu(Cpu *cpu, Bus *bus) {
+static inline void execute_multu(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint64_t product = (uint64_t)reg_read(cpu, RS(cpu)) * (uint64_t)reg_read(cpu, RT(cpu));
     cpu->hi = (uint32_t)(product >> 32);
     cpu->lo = (uint32_t)(product & 0xFFFFFFFF);
 }
 
-static inline void execute_div(Cpu *cpu, Bus *bus) {
+static inline void execute_div(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     int32_t rs = (int32_t)reg_read(cpu, RS(cpu));
     int32_t rt = (int32_t)reg_read(cpu, RT(cpu));
     if (rt == 0) {
@@ -312,7 +335,8 @@ static inline void execute_div(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_divu(Cpu *cpu, Bus *bus) {
+static inline void execute_divu(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t rs = reg_read(cpu, RS(cpu));
     uint32_t rt = reg_read(cpu, RT(cpu));
     if (rt == 0) {
@@ -324,7 +348,8 @@ static inline void execute_divu(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_add(Cpu *cpu, Bus *bus) {
+static inline void execute_add(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t rs = reg_read(cpu, RS(cpu));
     uint32_t rt = reg_read(cpu, RT(cpu));
     uint32_t result = rs + rt;
@@ -336,7 +361,8 @@ static inline void execute_add(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_sub(Cpu *cpu, Bus *bus) {
+static inline void execute_sub(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t rs = reg_read(cpu, RS(cpu));
     uint32_t rt = reg_read(cpu, RT(cpu));
     uint32_t result = rs - rt;
@@ -348,14 +374,16 @@ static inline void execute_sub(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_j(Cpu *cpu, Bus *bus) {
+static inline void execute_j(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t pc = get_next_pc(cpu);
     uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
     cpu->next_branch_target = target;
     cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
 
-static inline void execute_jal(Cpu *cpu, Bus *bus) {
+static inline void execute_jal(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t pc = get_next_pc(cpu);
     uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
     reg_write(cpu, 31, pc + 4); // Save return address in $ra
@@ -364,7 +392,8 @@ static inline void execute_jal(Cpu *cpu, Bus *bus) {
 }
 
 
-static inline void execute_addi(Cpu *cpu, Bus *bus) {
+static inline void execute_addi(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t rs = reg_read(cpu, RS(cpu));
     int16_t simm = SIMM(cpu);
     uint32_t result = rs + simm;
@@ -376,23 +405,26 @@ static inline void execute_addi(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_lb(Cpu *cpu, Bus *bus) {
+static inline void execute_lb(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
-    int32_t value = (int32_t)(int8_t)bus_read8(bus, addr);
+    int32_t value = (int32_t)(int8_t)bus_read8(psx, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_lbu(Cpu *cpu, Bus *bus) {
+static inline void execute_lbu(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
-    uint32_t value = bus_read8(bus, addr);
+    uint32_t value = bus_read8(psx, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_lh(Cpu *cpu, Bus *bus) {
+static inline void execute_lh(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
@@ -400,31 +432,34 @@ static inline void execute_lh(Cpu *cpu, Bus *bus) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    int32_t value = (int32_t)(int16_t)bus_read16(bus, addr);
+    int32_t value = (int32_t)(int16_t)bus_read16(psx, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_lhu(Cpu *cpu, Bus *bus) {
+static inline void execute_lhu(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    uint32_t value = bus_read16(bus, addr);
+    uint32_t value = bus_read16(psx, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_lw(Cpu *cpu, Bus *bus) {
+static inline void execute_lw(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    uint32_t value = bus_read32(bus, addr);
+    uint32_t value = bus_read32(psx, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_lwl(Cpu *cpu, Bus *bus) {
+static inline void execute_lwl(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t aligned_addr = addr & ~3; // Align address to 4 bytes
     uint32_t result;
@@ -432,25 +467,25 @@ static inline void execute_lwl(Cpu *cpu, Bus *bus) {
     switch (addr & 3) {
         case 0: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value = bus_read8(bus, aligned_addr);
+            uint8_t mem_value = bus_read8(psx, aligned_addr);
             result = (reg_value & 0x00FFFFFF) | (mem_value << 24);
             break;
         }
         case 1: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value = bus_read16(bus, aligned_addr);
+            uint16_t mem_value = bus_read16(psx, aligned_addr);
             result = (reg_value & 0x0000FFFF) | (mem_value << 16);
             break;
         }
         case 2: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value_16 = bus_read16(bus, aligned_addr);
-            uint8_t mem_value_8 = bus_read8(bus, addr);
+            uint16_t mem_value_16 = bus_read16(psx, aligned_addr);
+            uint8_t mem_value_8 = bus_read8(psx, addr);
             result = (reg_value & 0x000000FF) | (mem_value_16 << 8) | (mem_value_8 << 24);
             break;
         }
         case 3: {
-            result = bus_read32(bus, aligned_addr);
+            result = bus_read32(psx, aligned_addr);
             break;
         }
     }
@@ -458,30 +493,31 @@ static inline void execute_lwl(Cpu *cpu, Bus *bus) {
     schedule_load(cpu, RT(cpu), result);
 }
 
-static inline void execute_lwr(Cpu *cpu, Bus *bus) {
+static inline void execute_lwr(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t result;
 
     switch (addr & 3) {
         case 0:
-            result = bus_read32(bus, addr);
+            result = bus_read32(psx, addr);
             break;
         case 1: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value_8 = bus_read8(bus, addr);
-            uint16_t mem_value_16 = bus_read16(bus, addr + 1);
+            uint8_t mem_value_8 = bus_read8(psx, addr);
+            uint16_t mem_value_16 = bus_read16(psx, addr + 1);
             result = (reg_value & 0xFF000000) | (mem_value_16 << 8) | mem_value_8;
             break;
         }
         case 2: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value_16 = bus_read16(bus, addr);
+            uint16_t mem_value_16 = bus_read16(psx, addr);
             result = (reg_value & 0xFFFF0000) | mem_value_16;
             break;
         }
         case 3: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value_8 = bus_read8(bus, addr);
+            uint8_t mem_value_8 = bus_read8(psx, addr);
             result = (reg_value & 0xFFFFFF00) | mem_value_8;
             break;
         }
@@ -490,71 +526,76 @@ static inline void execute_lwr(Cpu *cpu, Bus *bus) {
     schedule_load(cpu, RT(cpu), result);
 }
 
-static inline void execute_sb(Cpu *cpu, Bus *bus) {
+static inline void execute_sb(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint8_t value = (uint8_t)reg_read(cpu, RT(cpu));
-    cpu_write8(cpu, bus, addr, value);
+    cpu_write8(psx, addr, value);
 }
 
-static inline void execute_sh(Cpu *cpu, Bus *bus) {
+static inline void execute_sh(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
     uint16_t value = (uint16_t)reg_read(cpu, RT(cpu));
-    cpu_write16(cpu, bus, addr, value);
+    cpu_write16(psx, addr, value);
 }
 
-static inline void execute_sw(Cpu *cpu, Bus *bus) {
+static inline void execute_sw(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
     uint32_t value = reg_read(cpu, RT(cpu));
-    cpu_write32(cpu, bus, addr, value);
+    cpu_write32(psx, addr, value);
 }
 
-static inline void execute_swl(Cpu *cpu, Bus *bus) {
+static inline void execute_swl(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t aligned_addr = addr & ~3; // Align address to 4 bytes
     uint32_t value = reg_read(cpu, RT(cpu));
 
     switch (addr & 3) {
         case 0:
-            cpu_write8(cpu, bus, aligned_addr, value >> 24);
+            cpu_write8(psx, aligned_addr, value >> 24);
             break;
         case 1:
-            cpu_write16(cpu, bus, aligned_addr, value >> 16);
+            cpu_write16(psx, aligned_addr, value >> 16);
             break;
         case 2:
-            cpu_write16(cpu, bus, aligned_addr, value >> 8);
-            cpu_write8(cpu, bus, addr, (value >> 24) & 0xFF);
+            cpu_write16(psx, aligned_addr, value >> 8);
+            cpu_write8(psx, addr, (value >> 24) & 0xFF);
             break;
         case 3:
-            cpu_write32(cpu, bus, aligned_addr, value);
+            cpu_write32(psx, aligned_addr, value);
             break;
     }
 }
 
-static inline void execute_swr(Cpu *cpu, Bus *bus) {
+static inline void execute_swr(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t value = reg_read(cpu, RT(cpu));
 
     switch (addr & 3) {
         case 0:
-            cpu_write32(cpu, bus, addr, value);
+            cpu_write32(psx, addr, value);
             break;
         case 1:
-            cpu_write8(cpu, bus, addr, value);
-            cpu_write16(cpu, bus, addr + 1, value >> 8);
+            cpu_write8(psx, addr, value);
+            cpu_write16(psx, addr + 1, value >> 8);
             break;
         case 2:
-            cpu_write16(cpu, bus, addr, value);
+            cpu_write16(psx, addr, value);
             break;
         case 3:
-            cpu_write8(cpu, bus, addr, value);
+            cpu_write8(psx, addr, value);
             break;
     }
 }
@@ -570,7 +611,7 @@ static inline void cop0_write(Cpu *cpu, uint8_t rd, uint32_t value) {
     }
 }
 
-static inline void cop0_read(Cpu *cpu, Bus *bus) {
+static inline void cop0_read(Cpu *cpu) {
     uint32_t value = 0;
     switch (RD(cpu)) {
         case 3:  value = cpu->cop0.bpc;       break;
@@ -586,10 +627,11 @@ static inline void cop0_read(Cpu *cpu, Bus *bus) {
     schedule_load(cpu, RT(cpu), value);
 }
 
-static inline void execute_cop0(Cpu *cpu, Bus *bus) {
+static inline void execute_cop0(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     switch (RS(cpu)) {
         case 0x00: // MFC0
-            cop0_read(cpu, bus);
+            cop0_read(cpu);
             break;
         case 0x04: // MTC0
             cop0_write(cpu, RD(cpu), reg_read(cpu, RT(cpu)));
@@ -605,25 +647,28 @@ static inline void execute_cop0(Cpu *cpu, Bus *bus) {
     }
 }
 
-static inline void execute_cop2(Cpu *cpu, Bus *bus) {
+static inline void execute_cop2(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     // Placeholder for COP2 instructions (e.g., GTE)
     cpu->next_exc_code = EXC_RI; // Reserved instruction exception
 }
 
-static inline void execute_bcond(Cpu *cpu, Bus *bus) {
+static inline void execute_bcond(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint8_t rt = RT(cpu);
     if (rt == 0x10) {
-        execute_bltzal(cpu, bus);
+        execute_bltzal(psx);
     } else if (rt == 0x11) {
-        execute_bgezal(cpu, bus);
+        execute_bgezal(psx);
     } else if (rt & 0x1) {
-        execute_bgez(cpu, bus);
+        execute_bgez(psx);
     } else {
-        execute_bltz(cpu, bus);
+        execute_bltz(psx);
     }
 }
 
-static inline void execute_instruction(Cpu *cpu, Bus *bus) {
+static inline void execute_instruction(PSX *psx) {
+    Cpu *cpu = psx->cpu;
     if (cpu->inst == 0) {
         return;
     }
@@ -631,7 +676,7 @@ static inline void execute_instruction(Cpu *cpu, Bus *bus) {
     switch (OPCODE(cpu)) {
         case 0x00: // SPECIAL
             switch (FUNCT(cpu)) {
-                #define X(funct, name) case funct: execute_##name(cpu, bus); break;
+                #define X(funct, name) case funct: execute_##name(psx); break;
                 FUNCT_TABLE
                 #undef X
                 default:
@@ -639,7 +684,7 @@ static inline void execute_instruction(Cpu *cpu, Bus *bus) {
                     break;
             }
             break;
-        #define X(opcode, name) case opcode: execute_##name(cpu, bus); break;
+        #define X(opcode, name) case opcode: execute_##name(psx); break;
         OPCODE_TABLE
         #undef X
         default:
@@ -660,8 +705,8 @@ static inline void cpu_begin_step(Cpu *cpu) {
 #endif
 }
 
-static inline void cpu_execute(Cpu *cpu, Bus *bus) {
-    execute_instruction(cpu, bus);
+static inline void cpu_execute(PSX *psx) {
+    execute_instruction(psx);
 }
 
 static inline void cpu_finish_step(Cpu *cpu) {
@@ -686,7 +731,9 @@ static inline void cpu_finish_step(Cpu *cpu) {
 #endif
 }
 
-uint32_t cpu_step(Cpu *cpu, Bus *bus) {
+uint32_t cpu_step(PSX *psx) {
+    Cpu *cpu = psx->cpu;
+
     cpu_begin_step(cpu);
 
     if (unlikely(cpu->pc & 3)) {
@@ -695,15 +742,90 @@ uint32_t cpu_step(Cpu *cpu, Bus *bus) {
         return cpu->pc;
     }
 
-    cpu->inst = bus_fetch32(bus, cpu->pc);
-    cpu_execute(cpu, bus);
+    cpu->inst = bus_fetch32(psx, cpu->pc);
+    cpu_execute(psx);
     cpu_finish_step(cpu);
     return cpu->pc;
+}
+
+static inline void cpu_decode_block(PSX *psx, BasicBlock *block) {
+    Cpu *cpu = psx->cpu;
+    uint32_t pc = cpu->pc;
+    block->start_pc = pc;
+    block->instruction_count = 0;
+
+    bool delay_slot = false;
+    bool exception_occurred = false;
+
+    for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+        uint32_t inst = bus_fetch32(psx, pc);
+        block->instructions[i] = inst;
+        block->instruction_count++;
+
+        if (delay_slot) {
+            break; // Stop decoding after the delay slot instruction
+        }
+
+        // Check if the instruction is a branch or jump to terminate the block
+        uint8_t opcode = (inst >> 26) & 0x3F;
+        switch (opcode) {
+            case 0x00: { // SPECIAL
+                uint8_t funct = inst & 0x3F;
+                if (funct == 0x08 || funct == 0x09) { // JR or JALR
+                    delay_slot = true;
+                    break;
+                }
+                if (funct == 0x0C || funct == 0x0D) { // SYSCALL or BREAK
+                    exception_occurred = true;
+                    break;
+                }
+                break;
+            }
+            case 0x02: // J
+            case 0x03: // JAL
+            case 0x04: // BEQ
+            case 0x05: // BNE
+            case 0x06: // BLEZ
+            case 0x07: // BGTZ
+            case 0x01: { // BCOND
+                delay_slot = true;
+                break;
+            }
+        }
+
+        if (exception_occurred) {
+            break;
+        }
+
+        pc += 4;
+    }
+
+    block->end_pc = pc;
+    block->valid = true;
+}
+
+void cpu_step_block(PSX *psx) {
+    Cpu *cpu = psx->cpu;
+    BlockCache *cache = psx->bcache;
+
+    BasicBlock *block = bcache_get_block(cache, cpu->pc);
+    if (!block->valid) {
+        // If the block is not valid, we need to fetch and decode instructions
+        cpu_decode_block(psx, block);
+    }
+
+    for (size_t i = 0; i < block->instruction_count; ++i) {
+        cpu_begin_step(cpu);
+        cpu->inst = block->instructions[i];
+        cpu_execute(psx);
+        cpu_finish_step(cpu);
+    }
 }
 
 Cpu *cpu_create(void) {
     Cpu *cpu = (Cpu *)malloc(sizeof(Cpu));
     if (!cpu) {
+        fprintf(stderr, "Failed to allocate memory for CPU\n");
         exit(EXIT_FAILURE); // Handle memory allocation failure
     }
     cpu_reset(cpu);

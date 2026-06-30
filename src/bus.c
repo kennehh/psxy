@@ -3,10 +3,16 @@
 #include <string.h>
 #include <stdbool.h>
 #include "bus.h"
+#include "bus_access.h"
 
 static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
         uint32_t page = addr >> BUS_PAGE_SHIFT;
+        if (page >= BUS_PAGE_COUNT) {
+            fprintf(stderr, "Address 0x%08X is out of bus page range\n", addr);
+            exit(EXIT_FAILURE);
+        }
+
         bus->read_pages[page] = buffer + (addr - start_phys_addr);
         if (!read_only) {
             bus->write_pages[page] = buffer + (addr - start_phys_addr);
@@ -50,22 +56,22 @@ Bus* bus_create(void) {
     return bus;
 }
 
-void bus_install_bios_trampolines(Bus *bus) {
-    bus_write32(bus, 0xA0, 0x03E00008); // jr $ra
-    bus_write32(bus, 0xA4, 0x00000000);
-    bus_write32(bus, 0xB0, 0x03E00008); // jr $ra
-    bus_write32(bus, 0xB4, 0x00000000);
-    bus_write32(bus, 0xC0, 0x03E00008); // jr $ra
-    bus_write32(bus, 0xC4, 0x00000000);
+void bus_install_bios_trampolines(PSX *psx) {
+    bus_write32(psx, 0xA0, 0x03E00008); // jr $ra
+    bus_write32(psx, 0xA4, 0x00000000);
+    bus_write32(psx, 0xB0, 0x03E00008); // jr $ra
+    bus_write32(psx, 0xB4, 0x00000000);
+    bus_write32(psx, 0xC0, 0x03E00008); // jr $ra
+    bus_write32(psx, 0xC4, 0x00000000);
 }
 
-void bus_clear_bios_trampolines(Bus *bus) {
-    bus_write32(bus, 0xA0, 0x00000000);
-    bus_write32(bus, 0xA4, 0x00000000);
-    bus_write32(bus, 0xB0, 0x00000000);
-    bus_write32(bus, 0xB4, 0x00000000);
-    bus_write32(bus, 0xC0, 0x00000000);
-    bus_write32(bus, 0xC4, 0x00000000);
+void bus_clear_bios_trampolines(PSX *psx) {
+    bus_write32(psx, 0xA0, 0x00000000);
+    bus_write32(psx, 0xA4, 0x00000000);
+    bus_write32(psx, 0xB0, 0x00000000);
+    bus_write32(psx, 0xB4, 0x00000000);
+    bus_write32(psx, 0xC0, 0x00000000);
+    bus_write32(psx, 0xC4, 0x00000000);
 }
 
 void bus_reset(Bus *bus) {
@@ -75,7 +81,6 @@ void bus_reset(Bus *bus) {
     memset(bus->exp1, 0, EXP1_SIZE);
     memset(bus->scratchpad, 0, SCRATCHPAD_SIZE);
     memset(bus->bios, 0, BIOS_SIZE);
-    bus_install_bios_trampolines(bus);
 }
 
 void bus_destroy(Bus *bus) {

@@ -1,6 +1,10 @@
-#include "tty.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include "tty.h"
+#include "cpu.h"
+#include "psx.h"
+#include "bus_access.h"
 
 TTY *tty_create(void) {
     TTY *tty = (TTY *)malloc(sizeof(TTY));
@@ -25,7 +29,8 @@ void tty_reset(TTY *tty) {
     tty->buffer[0] = '\0';
 }
 
-static inline uint32_t get_arg_value(Cpu* cpu, Bus *bus, uint8_t arg_idx) {
+static inline uint32_t get_arg_value(PSX *psx, uint8_t arg_idx) {
+    Cpu *cpu = psx->cpu;
     if (arg_idx < 4) {
         // R4, R5, R6, R7
         return cpu->r[4 + arg_idx];
@@ -34,7 +39,7 @@ static inline uint32_t get_arg_value(Cpu* cpu, Bus *bus, uint8_t arg_idx) {
     // [SP+10h...]
     uint32_t sp = cpu->r[29];
     uint32_t arg_addr = sp + 0x10 + ((arg_idx - 4) << 2);
-    return bus_read32(bus, arg_addr);
+    return bus_read32(psx, arg_addr);
 }
 
 static inline void tty_putchar(TTY *tty, char c) {
@@ -49,8 +54,8 @@ static inline void tty_putchar(TTY *tty, char c) {
     }
 }
 
-static inline char* arg_number(TTY *tty, Cpu* cpu, Bus *bus, uint8_t arg_idx, char specifier) {
-    uint32_t val = get_arg_value(cpu, bus, arg_idx);
+static inline char* arg_number(TTY *tty, PSX *psx, uint8_t arg_idx, char specifier) {
+    uint32_t val = get_arg_value(psx, arg_idx);
     static char num_buf[TTY_BUFFER_SIZE];
 
     switch (specifier) {
@@ -74,12 +79,12 @@ static inline char* arg_number(TTY *tty, Cpu* cpu, Bus *bus, uint8_t arg_idx, ch
     return num_buf;
 }
 
-static inline char* arg_string(TTY *tty, Cpu* cpu, Bus* bus, uint8_t arg_idx, size_t max_length) {
-    uint32_t str_addr = get_arg_value(cpu, bus, arg_idx);
+static inline char* arg_string(TTY *tty, PSX *psx, uint8_t arg_idx, size_t max_length) {
+    uint32_t str_addr = get_arg_value(psx, arg_idx);
     static char buffer[TTY_BUFFER_SIZE];
 
     for (size_t i = 0; i < max_length; i++) {
-        char c = bus_read8(bus, str_addr + i);
+        char c = bus_read8(psx, str_addr + i);
         buffer[i] = c;
         if (c == '\0') {
             break;
@@ -89,14 +94,15 @@ static inline char* arg_string(TTY *tty, Cpu* cpu, Bus* bus, uint8_t arg_idx, si
     return buffer;
 }
 
-static inline char* arg_char(TTY *tty, Cpu* cpu, Bus* bus, uint8_t arg_idx) {
+static inline char* arg_char(TTY *tty, PSX *psx, uint8_t arg_idx) {
     static char buffer[TTY_BUFFER_SIZE];
-    buffer[0] = (char)(get_arg_value(cpu, bus, arg_idx) & 0xFF);
+    buffer[0] = (char)(get_arg_value(psx, arg_idx) & 0xFF);
     buffer[1] = '\0';
     return buffer;
 }
 
-static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
+static inline void tty_printf(TTY *tty, PSX *psx) {
+    Cpu *cpu = psx->cpu;
     static char buffer[TTY_BUFFER_SIZE];
     uint32_t addr = cpu->r[4];
     uint8_t arg_idx = 1;
@@ -104,7 +110,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
     uint8_t buffer_idx = 0;
 
     for (int i = 0; i < max_msg_length; i++) {
-        char c = bus_read8(bus, addr + i);
+        char c = bus_read8(psx, addr + i);
         if (c == '\0') {
             break;
         }
@@ -113,7 +119,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
             continue;
         }
 
-        char c_next = bus_read8(bus, addr + i + 1);
+        char c_next = bus_read8(psx, addr + i + 1);
         if (c_next == '%') {
             buffer[buffer_idx++] = '%';
             i++;
@@ -121,7 +127,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
         }
 
         i++;
-        c = bus_read8(bus, addr + i);
+        c = bus_read8(psx, addr + i);
 
         char pad_ch = ' ';
         bool left_align = false;
@@ -137,7 +143,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
         }
 
         while (i < max_msg_length) {
-            c = bus_read8(bus, addr + i);
+            c = bus_read8(psx, addr + i);
             if (c < '0' || c > '9') {
                 break;
             }
@@ -149,7 +155,7 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
             i++;
             // Precision is ignored for now
             while (i < max_msg_length) {
-                c = bus_read8(bus, addr + i);
+                c = bus_read8(psx, addr + i);
                 if (c < '0' || c > '9') {
                     break;
                 }
@@ -167,13 +173,13 @@ static inline void tty_printf(TTY *tty, Cpu *cpu, Bus *bus) {
 
         switch (c) {
             case 'c':
-                arg_value_buffer = arg_char(tty, cpu, bus, arg_idx++);
+                arg_value_buffer = arg_char(tty, psx, arg_idx++);
                 break;
             case 's':
-                arg_value_buffer = arg_string(tty, cpu, bus, arg_idx++, max_arg_length);
+                arg_value_buffer = arg_string(tty, psx, arg_idx++, max_arg_length);
                 break;
             case 'd': case 'i': case 'u': case 'x': case 'X':
-                arg_value_buffer = arg_number(tty, cpu, bus, arg_idx++, c);
+                arg_value_buffer = arg_number(tty, psx, arg_idx++, c);
                 break;
             default:
                 // Unsupported specifier, just print it as is
@@ -231,14 +237,15 @@ void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
     }
 }
 
-void tty_maybe_printf(TTY *tty, Cpu *cpu, Bus* bus) {
+void tty_maybe_printf(TTY *tty, PSX *psx) {
+    Cpu *cpu = psx->cpu;
     uint32_t pc = physical_address(cpu->pc);
     uint8_t func_code = cpu->r[9] & 0xFF;
     uint32_t pc_func = (pc << 8) | func_code;
 
     switch (pc_func) {
         case 0xA03F: // PC = 0xA0, func_code = 0x3F
-            tty_printf(tty, cpu, bus);
+            tty_printf(tty, psx);
             break;
         default:
             break;
