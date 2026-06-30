@@ -46,34 +46,34 @@ void set_state(State *state, struct json_object *json_state) {
         for (int i = 0; i < 32; i++) {
             struct json_object *reg_value = json_object_array_get_idx(r_array, i);
             if (reg_value) {
-                state->R[i] = json_object_get_uint64(reg_value);
+                state->R[i] = (uint32_t)json_object_get_uint64(reg_value);
             }
         }
     }
 
     struct json_object *hi_value = json_object_object_get(json_state, "hi");
     if (hi_value) {
-        state->hi = json_object_get_uint64(hi_value);
+        state->hi = (uint32_t)json_object_get_uint64(hi_value);
     }
 
     struct json_object *lo_value = json_object_object_get(json_state, "lo");
     if (lo_value) {
-        state->lo = json_object_get_uint64(lo_value);
+        state->lo = (uint32_t)json_object_get_uint64(lo_value);
     }
 
     struct json_object *epc_value = json_object_object_get(json_state, "EPC");
     if (epc_value) {
-        state->EPC = json_object_get_uint64(epc_value);
+        state->EPC = (uint32_t)json_object_get_uint64(epc_value);
     }
 
     struct json_object *cause_value = json_object_object_get(json_state, "CAUSE");
     if (cause_value) {
-        state->CAUSE = json_object_get_uint64(cause_value);
+        state->CAUSE = (uint32_t)json_object_get_uint64(cause_value);
     }
 
     struct json_object *pc_value = json_object_object_get(json_state, "PC");
     if (pc_value) {
-        state->PC = json_object_get_uint64(pc_value);
+        state->PC = (uint32_t)json_object_get_uint64(pc_value);
     }
 
     struct json_object *delay_obj = json_object_object_get(json_state, "delay");
@@ -82,12 +82,12 @@ void set_state(State *state, struct json_object *json_state) {
         if (load_value) {
             state->delay.load_slot = json_object_get_boolean(json_object_object_get(load_value, "slot"));
             state->delay.load_take = json_object_get_boolean(json_object_object_get(load_value, "take"));
-            state->delay.load_target = json_object_get_uint64(json_object_object_get(load_value, "target"));
+            state->delay.load_target = (uint32_t)json_object_get_uint64(json_object_object_get(load_value, "target"));
         }
         struct json_object *branch_value = json_object_object_get(delay_obj, "branch");
         if (branch_value) {
-            state->delay.branch_target = json_object_get_uint64(json_object_object_get(branch_value, "target"));
-            state->delay.branch_val = json_object_get_uint64(json_object_object_get(branch_value, "val"));
+            state->delay.branch_target = (uint32_t)json_object_get_uint64(json_object_object_get(branch_value, "target"));
+            state->delay.branch_val = (uint32_t)json_object_get_uint64(json_object_object_get(branch_value, "val"));
         }
     }
 }
