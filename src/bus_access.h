@@ -31,8 +31,7 @@ static inline void io_write32(PSX *psx, uint32_t addr, uint32_t value) {
 }
 
 static inline uint8_t bus_read8(PSX *psx, uint32_t addr) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = psx->bus->read_pages[page];
 
     if (page_ptr == NULL) {
@@ -44,8 +43,7 @@ static inline uint8_t bus_read8(PSX *psx, uint32_t addr) {
 }
 
 static inline uint16_t bus_read16(PSX *psx, uint32_t addr) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = psx->bus->read_pages[page];
 
     if (page_ptr == NULL) {
@@ -83,43 +81,41 @@ static inline uint32_t bus_fetch32(PSX *psx, uint32_t addr) {
 }
 
 static inline void bus_write8(PSX *psx, uint32_t addr, uint8_t value) {
-    addr = physical_address(addr); uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = psx->bus->write_pages[page];
 
     if (page_ptr == NULL) {
         io_write8(psx, addr, value);
         return;
     }
-
+    // bcache_invalidate_page(psx->bcache, page); // Invalidate the block cache for this page
     uint32_t offset = addr & BUS_PAGE_MASK;
     page_ptr[offset] = value;
 }
 
 static inline void bus_write16(PSX *psx, uint32_t addr, uint16_t value) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = psx->bus->write_pages[page];
 
     if (page_ptr == NULL) {
         io_write16(psx, addr, value);
         return;
     }
-
+    // bcache_invalidate_page(psx->bcache, page); // Invalidate the block cache for this page
     uint32_t offset = addr & BUS_PAGE_MASK;
     memcpy(page_ptr + offset, &value, sizeof(uint16_t));
 
 }
 
 static inline void bus_write32(PSX *psx, uint32_t addr, uint32_t value) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = psx->bus->write_pages[page];
 
     if (page_ptr == NULL) {
         io_write32(psx, addr, value);
         return;
     }
-
+    // bcache_invalidate_page(psx->bcache, page); // Invalidate the block cache for this page
     uint32_t offset = addr & BUS_PAGE_MASK;
     memcpy(page_ptr + offset, &value, sizeof(uint32_t));
 }

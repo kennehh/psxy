@@ -5,17 +5,18 @@
 #include "bus.h"
 #include "bus_access.h"
 
-static void map_buffer(Bus *bus, uint8_t *buffer, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
+static void map_buffer(Bus *bus, uint8_t *buffer, size_t size, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
-        uint32_t page = addr >> BUS_PAGE_SHIFT;
+        uint32_t page = get_page_index(addr);
         if (page >= BUS_PAGE_COUNT) {
             fprintf(stderr, "Address 0x%08X is out of bus page range\n", addr);
             exit(EXIT_FAILURE);
         }
 
-        bus->read_pages[page] = buffer + (addr - start_phys_addr);
+        uint32_t buffer_offset = (addr - start_phys_addr) % size;
+        bus->read_pages[page] = buffer + buffer_offset;
         if (!read_only) {
-            bus->write_pages[page] = buffer + (addr - start_phys_addr);
+            bus->write_pages[page] = buffer + buffer_offset;
         }
     }
 }
@@ -41,16 +42,16 @@ Bus* bus_create(void) {
     }
 
     init_buffer(&bus->ram, RAM_SIZE);
-    map_buffer(bus, bus->ram, RAM_PHYS_START, RAM_PHYS_END, false);
+    map_buffer(bus, bus->ram, RAM_SIZE, RAM_PHYS_START, RAM_PHYS_END, false);
 
     init_buffer(&bus->exp1, EXP1_SIZE);
-    map_buffer(bus, bus->exp1, EXP1_PHYS_START, EXP1_PHYS_END, false);
+    map_buffer(bus, bus->exp1, EXP1_SIZE, EXP1_PHYS_START, EXP1_PHYS_END, false);
 
     init_buffer(&bus->scratchpad, SCRATCHPAD_SIZE);
-    map_buffer(bus, bus->scratchpad, SCRATCHPAD_PHYS_START, SCRATCHPAD_PHYS_END, false);
+    map_buffer(bus, bus->scratchpad, SCRATCHPAD_SIZE, SCRATCHPAD_PHYS_START, SCRATCHPAD_PHYS_END, false);
 
     init_buffer(&bus->bios, BIOS_SIZE);
-    map_buffer(bus, bus->bios, BIOS_PHYS_START, BIOS_PHYS_END, true);
+    map_buffer(bus, bus->bios, BIOS_SIZE, BIOS_PHYS_START, BIOS_PHYS_END, true);
 
     bus_reset(bus);
     return bus;

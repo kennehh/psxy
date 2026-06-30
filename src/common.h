@@ -22,23 +22,23 @@
 
 #define RAM_SIZE       1024 * 1024 * 2 // 2MB of RAM
 #define RAM_PHYS_START 0x00000000
-#define RAM_PHYS_END   0x02000000
+#define RAM_PHYS_END   (RAM_PHYS_START + RAM_SIZE - 1)
 
 #define EXP1_SIZE       0x800000 // 8MB of expansion 1 memory
 #define EXP1_PHYS_START 0x1F000000
-#define EXP1_PHYS_END   0x1F800000
+#define EXP1_PHYS_END   (EXP1_PHYS_START + EXP1_SIZE - 1)
 
 #define SCRATCHPAD_SIZE 0x1000 // 1KB of scratchpad memory, but we will allocate 4KB for alignment
 #define SCRATCHPAD_PHYS_START 0x1F800000
-#define SCRATCHPAD_PHYS_END   0x1F801000
+#define SCRATCHPAD_PHYS_END   (SCRATCHPAD_PHYS_START + SCRATCHPAD_SIZE - 1)
 
 #define IO_SIZE       0x2000 // 8KB of I/O memory
 #define IO_PHYS_START 0x1F801000
-#define IO_PHYS_END   0x1F803000
+#define IO_PHYS_END   (IO_PHYS_START + IO_SIZE - 1)
 
 #define BIOS_SIZE       0x80000 // 512KB of BIOS
 #define BIOS_PHYS_START 0x1FC00000
-#define BIOS_PHYS_END   0x1FC80000
+#define BIOS_PHYS_END   (BIOS_PHYS_START + BIOS_SIZE - 1)
 
 // Shared declarations
 

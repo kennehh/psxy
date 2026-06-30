@@ -57,6 +57,6 @@ void cpu_destroy(Cpu *cpu);
 void cpu_reset(Cpu *cpu);
 
 uint32_t cpu_step(PSX *psx);
-void cpu_step_block(PSX *psx);
+uint32_t cpu_step_block(PSX *psx);
 
 #endif // CPU_H

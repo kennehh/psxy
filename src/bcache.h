@@ -73,10 +73,7 @@ static inline void bcache_validate_block(BlockCache *cache, BasicBlock *block, u
 static inline BasicBlock* bcache_get_block(BlockCache *cache, uint32_t pc) {
     uint32_t page = get_page_index(pc);
     BasicBlock *block = cache->block_page_table[page];
-    if (!block) {
-        block = bcache_create_block();
-        cache->block_page_table[page] = block;
-    } else {
+    if (block) {
         bcache_validate_block(cache, block, pc);
     }
     return block;
@@ -112,8 +109,7 @@ static inline void bcache_set_block(BlockCache *cache, BasicBlock *block) {
     }
 }
 
-static inline void bcache_invalidate_page_at_addr(BlockCache *cache, uint32_t addr) {
-    uint32_t page = get_page_index(addr);
+static inline void bcache_invalidate_page(BlockCache *cache, uint32_t page) {
     uint32_t page_gen = cache->block_generation[page];
     if (page_gen == 0) {
         // no code has been generated

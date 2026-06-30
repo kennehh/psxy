@@ -185,24 +185,21 @@ static inline void reg_write(Cpu *cpu, uint8_t reg, uint32_t value) {
 }
 
 static inline void cpu_write8(PSX *psx, uint32_t addr, uint8_t value) {
-    Cpu *cpu = psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(psx->cpu->cop0.status)) {
         return;
     }
     bus_write8(psx, addr, value);
 }
 
 static inline void cpu_write16(PSX *psx, uint32_t addr, uint16_t value) {
-    Cpu *cpu = psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(psx->cpu->cop0.status)) {
         return;
     }
     bus_write16(psx, addr, value);
 }
 
 static inline void cpu_write32(PSX *psx, uint32_t addr, uint32_t value) {
-    Cpu *cpu = psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (IS_CACHE_ISOLATED(psx->cpu->cop0.status)) {
         return;
     }
     bus_write32(psx, addr, value);
@@ -748,79 +745,90 @@ uint32_t cpu_step(PSX *psx) {
     return cpu->pc;
 }
 
-static inline void cpu_decode_block(PSX *psx, BasicBlock *block) {
-    Cpu *cpu = psx->cpu;
-    uint32_t pc = cpu->pc;
-    block->start_pc = pc;
-    block->instruction_count = 0;
+// static inline void cpu_decode_block(PSX *psx, BasicBlock *block) {
+//     Cpu *cpu = psx->cpu;
+//     uint32_t pc = cpu->pc;
+//     block->start_pc = pc;
+//     block->instruction_count = 0;
 
-    bool delay_slot = false;
-    bool exception_occurred = false;
+//     bool delay_slot = false;
+//     bool exception_occurred = false;
 
-    for (size_t i = 0; i < BLOCK_SIZE; ++i) {
-        uint32_t inst = bus_fetch32(psx, pc);
-        block->instructions[i] = inst;
-        block->instruction_count++;
+//     for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+//         uint32_t inst = bus_fetch32(psx, pc);
+//         block->instructions[i] = inst;
+//         block->instruction_count++;
 
-        if (delay_slot) {
-            break; // Stop decoding after the delay slot instruction
-        }
+//         if (delay_slot) {
+//             break; // Stop decoding after the delay slot instruction
+//         }
 
-        // Check if the instruction is a branch or jump to terminate the block
-        uint8_t opcode = (inst >> 26) & 0x3F;
-        switch (opcode) {
-            case 0x00: { // SPECIAL
-                uint8_t funct = inst & 0x3F;
-                if (funct == 0x08 || funct == 0x09) { // JR or JALR
-                    delay_slot = true;
-                    break;
-                }
-                if (funct == 0x0C || funct == 0x0D) { // SYSCALL or BREAK
-                    exception_occurred = true;
-                    break;
-                }
-                break;
-            }
-            case 0x02: // J
-            case 0x03: // JAL
-            case 0x04: // BEQ
-            case 0x05: // BNE
-            case 0x06: // BLEZ
-            case 0x07: // BGTZ
-            case 0x01: { // BCOND
-                delay_slot = true;
-                break;
-            }
-        }
+//         // Check if the instruction is a branch or jump to terminate the block
+//         uint8_t opcode = (inst >> 26) & 0x3F;
+//         switch (opcode) {
+//             case 0x00: { // SPECIAL
+//                 uint8_t funct = inst & 0x3F;
+//                 if (funct == 0x08 || funct == 0x09) { // JR or JALR
+//                     delay_slot = true;
+//                     break;
+//                 }
+//                 if (funct == 0x0C || funct == 0x0D) { // SYSCALL or BREAK
+//                     exception_occurred = true;
+//                     break;
+//                 }
+//                 break;
+//             }
+//             case 0x02: // J
+//             case 0x03: // JAL
+//             case 0x04: // BEQ
+//             case 0x05: // BNE
+//             case 0x06: // BLEZ
+//             case 0x07: // BGTZ
+//             case 0x01: { // BCOND
+//                 delay_slot = true;
+//                 break;
+//             }
+//         }
 
-        if (exception_occurred) {
-            break;
-        }
+//         if (exception_occurred) {
+//             break;
+//         }
 
-        pc += 4;
-    }
+//         pc += 4;
+//     }
 
-    block->end_pc = pc;
-    block->valid = true;
-}
+//     block->end_pc = pc;
+//     block->valid = true;
+// }
 
-void cpu_step_block(PSX *psx) {
-    Cpu *cpu = psx->cpu;
-    BlockCache *cache = psx->bcache;
+// uint32_t cpu_step_block(PSX *psx) {
+//     Cpu *cpu = psx->cpu;
+//     BlockCache *cache = psx->bcache;
 
-    BasicBlock *block = bcache_get_block(cache, cpu->pc);
-    if (!block->valid) {
-        // If the block is not valid, we need to fetch and decode instructions
-        cpu_decode_block(psx, block);
-    }
+//     BasicBlock *block = bcache_get_block(cache, cpu->pc);
+//     if (!block || !block->valid) {
+//         // If the block is not valid, we need to fetch and decode instructions
+//         block = bcache_create_block();
+//         cpu_decode_block(psx, block);
+//         bcache_set_block(cache, block);
+//     }
 
-    for (size_t i = 0; i < block->instruction_count; ++i) {
-        cpu_begin_step(cpu);
-        cpu->inst = block->instructions[i];
-        cpu_execute(psx);
-        cpu_finish_step(cpu);
-    }
-}
+//     uint32_t instructions_executed = 0;
+//     for (size_t i = 0; i < block->instruction_count; ++i) {
+//         uint32_t expected_pc = block->start_pc + (i << 2);
+//         if (cpu->pc != expected_pc) {
+//             // If the PC has changed unexpectedly, we need to break out of the block execution
+//             return instructions_executed;
+//         }
+
+//         cpu_begin_step(cpu);
+//         cpu->inst = block->instructions[i];
+//         cpu_execute(psx);
+//         cpu_finish_step(cpu);
+//         instructions_executed++;
+//     }
+//     return instructions_executed;
+// }
 
 Cpu *cpu_create(void) {
     Cpu *cpu = (Cpu *)malloc(sizeof(Cpu));
