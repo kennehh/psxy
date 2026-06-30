@@ -11,7 +11,7 @@ typedef struct PSX {
     Cpu *cpu;
     Bus *bus;
     TTY *tty;
-    BlockCache *bcache;
+    // BlockCache *bcache;
 } PSX;
 
 PSX *psx_create(void);
