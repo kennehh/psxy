@@ -47,7 +47,6 @@ void bus_init(Bus *bus) {
     bus->exp1 = init_buffer(EXP1_SIZE);
     map_buffer(bus, bus->exp1, EXP1_SIZE, EXP1_PHYS_START, EXP1_PHYS_END, false);
 
-    bus->scratchpad = init_buffer(SCRATCHPAD_SIZE);
     map_buffer(bus, bus->scratchpad, SCRATCHPAD_SIZE, SCRATCHPAD_PHYS_START, SCRATCHPAD_PHYS_END, false);
 
     bus->bios = init_buffer(BIOS_SIZE);
@@ -70,6 +69,5 @@ void bus_destroy(Bus *bus) {
 
     free(bus->ram);
     free(bus->exp1);
-    free(bus->scratchpad);
     free(bus->bios);
 }

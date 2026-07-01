@@ -49,9 +49,9 @@ int main(void) {
 
     for (int i = 0; i < 10; i++) {
         psx_reset(psx);
-        load_bios(psx, "C:\\Projects\\code\\psxy\\roms\\openbios.bin");
+        load_bios(psx, "roms/openbios.bin");
         run_until_kernel_init(psx);
-        load_exe(psx, "C:\\Projects\\code\\psxy\\roms\\psxtest_cpu.exe");
+        load_exe(psx, "roms/psxtest_cpu.exe");
 
         printf("Benchmark iteration %d\n", i + 1);
         benchmark(psx);

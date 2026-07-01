@@ -11,7 +11,7 @@ typedef struct Bus {
 
     uint8_t* ram;
     uint8_t* exp1;
-    uint8_t* scratchpad;
+    uint8_t scratchpad[SCRATCHPAD_SIZE];
     uint8_t* bios;
 } Bus;
 

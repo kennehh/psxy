@@ -28,9 +28,9 @@
 #define EXP1_PHYS_START 0x1F000000
 #define EXP1_PHYS_END   (EXP1_PHYS_START + EXP1_SIZE - 1)
 
-#define SCRATCHPAD_SIZE 0x1000 // 1KB of scratchpad memory, but we will allocate 4KB for alignment
+#define SCRATCHPAD_SIZE 1024 // 1KB of scratchpad memory
 #define SCRATCHPAD_PHYS_START 0x1F800000
-#define SCRATCHPAD_PHYS_END   (SCRATCHPAD_PHYS_START + SCRATCHPAD_SIZE - 1)
+#define SCRATCHPAD_PHYS_END   0x1F800FFF
 
 #define IO_SIZE       0x2000 // 8KB of I/O memory
 #define IO_PHYS_START 0x1F801000
