@@ -14,7 +14,6 @@ add_executable(psxy
     src/exceptions.c
     src/tty.c
     src/loader.c
-    src/bcache.c
 )
 
 target_include_directories(psxy PRIVATE src)

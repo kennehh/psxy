@@ -7,7 +7,6 @@
 #include "tty.h"
 #include "hrtime.h"
 #include <string.h>
-#include "bcache.h"
 
 #define MAX_STEPS 10000000
 #define TARGET_PC 0x80030000
@@ -21,7 +20,6 @@ static void benchmark(PSX *psx) {
     while (instructions_executed < max_steps) {
         // tty_maybe_putchar(psx->tty, psx->cpu);
         cpu_step(psx); instructions_executed++;
-        // instructions_executed += cpu_step_block(psx);
         // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
     }
 
@@ -40,7 +38,6 @@ static void run_until_kernel_init(PSX *psx) {
         // tty_maybe_putchar(tty, cpu);
         // cpu_step(cpu, bus);
         // tty_maybe_putchar(psx->tty, psx->cpu);
-        // cpu_step_block(psx);
         cpu_step(psx);
         if (psx->cpu->pc == TARGET_PC) {
             break;

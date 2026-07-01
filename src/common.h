@@ -47,7 +47,6 @@ typedef struct Cpu Cpu;
 typedef struct Cop0 Cop0;
 typedef struct Bus Bus;
 typedef struct TTY TTY;
-typedef struct BlockCache BlockCache;
 
 // Shared utility functions
 
