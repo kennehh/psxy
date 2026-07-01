@@ -34,7 +34,7 @@ static inline void io_write32(PSX *psx, uint32_t addr, uint32_t value) {
 
 static inline uint8_t bus_read8(PSX *psx, uint32_t addr) {
     uint32_t page = get_page_index(addr);
-    uint8_t *page_ptr = psx->bus->read_pages[page];
+    uint8_t *page_ptr = psx->bus.read_pages[page];
 
     if (page_ptr == NULL) {
         return io_read8(psx, addr);
@@ -46,7 +46,7 @@ static inline uint8_t bus_read8(PSX *psx, uint32_t addr) {
 
 static inline uint16_t bus_read16(PSX *psx, uint32_t addr) {
     uint32_t page = get_page_index(addr);
-    uint8_t *page_ptr = psx->bus->read_pages[page];
+    uint8_t *page_ptr = psx->bus.read_pages[page];
 
     if (page_ptr == NULL) {
         return io_read16(psx, addr);
@@ -61,7 +61,7 @@ static inline uint16_t bus_read16(PSX *psx, uint32_t addr) {
 static inline uint32_t bus_read32_internal(PSX *psx, uint32_t addr) {
     addr = physical_address(addr);
     uint32_t page = addr >> BUS_PAGE_SHIFT;
-    uint8_t *page_ptr = psx->bus->read_pages[page];
+    uint8_t *page_ptr = psx->bus.read_pages[page];
 
     if (page_ptr == NULL) {
         return io_read32(psx, addr);
@@ -84,7 +84,7 @@ static inline uint32_t bus_fetch32(PSX *psx, uint32_t addr) {
 
 static inline void bus_write8(PSX *psx, uint32_t addr, uint8_t value) {
     uint32_t page = get_page_index(addr);
-    uint8_t *page_ptr = psx->bus->write_pages[page];
+    uint8_t *page_ptr = psx->bus.write_pages[page];
 
     if (page_ptr == NULL) {
         io_write8(psx, addr, value);
@@ -96,7 +96,7 @@ static inline void bus_write8(PSX *psx, uint32_t addr, uint8_t value) {
 
 static inline void bus_write16(PSX *psx, uint32_t addr, uint16_t value) {
     uint32_t page = get_page_index(addr);
-    uint8_t *page_ptr = psx->bus->write_pages[page];
+    uint8_t *page_ptr = psx->bus.write_pages[page];
 
     if (page_ptr == NULL) {
         io_write16(psx, addr, value);
@@ -109,7 +109,7 @@ static inline void bus_write16(PSX *psx, uint32_t addr, uint16_t value) {
 
 static inline void bus_write32(PSX *psx, uint32_t addr, uint32_t value) {
     uint32_t page = get_page_index(addr);
-    uint8_t *page_ptr = psx->bus->write_pages[page];
+    uint8_t *page_ptr = psx->bus.write_pages[page];
 
     if (page_ptr == NULL) {
         io_write32(psx, addr, value);

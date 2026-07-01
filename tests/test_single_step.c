@@ -27,11 +27,10 @@ typedef struct {
     } delay;
 } State;
 
-Cpu* cpu;
-PSX psx;
-State* initial;
-State* final;
-State* actual;
+PSX *psx;
+State *initial;
+State *final;
+State *actual;
 
 Cycle *cycles;
 uint8_t cycle_count;
@@ -196,7 +195,7 @@ int test_file(const char *filename, Cpu *cpu) {
 
         set_cpu_from_state(cpu, initial);
 
-        cpu_step(&psx); // no actual bus needed since we're mocking the bus reads/writes
+        cpu_step(psx);
 
         set_state_from_cpu(actual, cpu);
 
@@ -255,9 +254,7 @@ int test_file(const char *filename, Cpu *cpu) {
 
 
 int main(int argc, char *argv[]) {
-    cpu = cpu_create();
-    memset(&psx, 0, sizeof(psx));
-    psx.cpu = cpu;
+    psx = psx_create();
     initial = malloc(sizeof(State));
     final = malloc(sizeof(State));
     actual = malloc(sizeof(State));
@@ -268,12 +265,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    test_file(argv[1], cpu);
+    test_file(argv[1], &psx->cpu);
 
     free(initial);
     free(final);
     free(actual);
-    cpu_destroy(cpu);
+
+    psx_destroy(psx);
 
     return 0;
 }

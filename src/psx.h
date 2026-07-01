@@ -7,9 +7,9 @@
 #include "tty.h"
 
 typedef struct PSX {
-    Cpu *cpu;
-    Bus *bus;
-    TTY *tty;
+    Cpu cpu;
+    Bus bus;
+    TTY tty;
 } PSX;
 
 PSX *psx_create(void);

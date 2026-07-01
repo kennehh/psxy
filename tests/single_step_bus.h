@@ -75,5 +75,4 @@ static inline void bus_write16(PSX *psx, uint32_t addr, uint16_t value) {
 static inline void bus_write32(PSX *psx, uint32_t addr, uint32_t value) {
     consume_write_cycle(ACTION_WRITE, 4, addr, value);
 }
-
 #endif // SINGLE_STEP_BUS_H

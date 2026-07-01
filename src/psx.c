@@ -3,6 +3,7 @@
 #include "bus.h"
 #include "tty.h"
 #include "psx.h"
+#include "loader.h"
 
 PSX *psx_create(void) {
     PSX *psx = (PSX *)malloc(sizeof(PSX));
@@ -10,26 +11,24 @@ PSX *psx_create(void) {
         fprintf(stderr, "Failed to allocate PSX structure\n");
         exit(EXIT_FAILURE);
     }
-    psx->cpu = cpu_create();
-    psx->bus = bus_create();
-    psx->tty = tty_create();
+    bus_init(&psx->bus);
+    cpu_reset(&psx->cpu);
+    tty_init(&psx->tty);
+    load_bios_trampolines(psx);
     return psx;
 }
 
 void psx_destroy(PSX *psx) {
     if (!psx) return;
-    cpu_destroy(psx->cpu);
-    bus_destroy(psx->bus);
-    tty_destroy(psx->tty);
     free(psx);
 }
 
 void psx_reset(PSX *psx) {
     if (!psx) return;
-    cpu_reset(psx->cpu);
-    bus_reset(psx->bus);
-    bus_install_bios_trampolines(psx);
-    tty_reset(psx->tty);
+    cpu_reset(&psx->cpu);
+    bus_reset(&psx->bus);
+    tty_reset(&psx->tty);
+    load_bios_trampolines(psx);
 }
 
 void psx_run(PSX *psx, uint32_t cycles) {

@@ -11,21 +11,10 @@
 #include "bus_access.h"
 #endif
 
-TTY *tty_create(void) {
-    TTY *tty = (TTY *)malloc(sizeof(TTY));
-    if (!tty) {
-        fprintf(stderr, "Failed to allocate TTY structure\n");
-        exit(EXIT_FAILURE);
-    }
+void tty_init(TTY *tty) {
     tty->buffer_index = 0;
     tty->strlen = 0;
     tty->buffer[0] = '\0';
-    return tty;
-}
-
-void tty_destroy(TTY *tty) {
-    if (!tty) return;
-    free(tty);
 }
 
 void tty_reset(TTY *tty) {
@@ -35,7 +24,7 @@ void tty_reset(TTY *tty) {
 }
 
 static inline uint32_t get_arg_value(PSX *psx, uint8_t arg_idx) {
-    Cpu *cpu = psx->cpu;
+    Cpu *cpu = &psx->cpu;
     if (arg_idx < 4) {
         // R4, R5, R6, R7
         return cpu->r[4 + arg_idx];
@@ -107,7 +96,7 @@ static inline char* arg_char(TTY *tty, PSX *psx, uint8_t arg_idx) {
 }
 
 static inline void tty_printf(TTY *tty, PSX *psx) {
-    Cpu *cpu = psx->cpu;
+    Cpu *cpu = &psx->cpu;
     static char buffer[TTY_BUFFER_SIZE];
     uint32_t addr = cpu->r[4];
     uint8_t arg_idx = 1;
@@ -243,7 +232,7 @@ void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
 }
 
 void tty_maybe_printf(TTY *tty, PSX *psx) {
-    Cpu *cpu = psx->cpu;
+    Cpu *cpu = &psx->cpu;
     uint32_t pc = physical_address(cpu->pc);
     uint8_t func_code = cpu->r[9] & 0xFF;
     uint32_t pc_func = (pc << 8) | func_code;

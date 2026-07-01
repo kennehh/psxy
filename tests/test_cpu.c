@@ -9,13 +9,12 @@
 
 int main() {
     PSX *psx = psx_create();
-    Cpu *cpu = psx->cpu;
 
     // should delay LW result by one instruction
-    cpu->pc = 0x00000000;
-    cpu->next_pc = cpu->pc + 4;
-    cpu->r[1] = 0x00002000; // base address for LW
-    cpu->r[2] = 0xDEADBEEF; // old value
+    psx->cpu.pc = 0x00000000;
+    psx->cpu.next_pc = psx->cpu.pc + 4;
+    psx->cpu.r[1] = 0x00002000; // base address for LW
+    psx->cpu.r[2] = 0xDEADBEEF; // old value
 
     bus_write32(psx, 0x00002000, 0xCAFEBABE); // write value to memory
 
@@ -32,16 +31,16 @@ int main() {
     int result = 0;
 
     // Check the results
-    if (cpu->r[2] != 0xCAFEBABE) {
-        fprintf(stderr, "$2 should now have the loaded value, but got 0x%08X\n", cpu->r[2]);
+    if (psx->cpu.r[2] != 0xCAFEBABE) {
+        fprintf(stderr, "$2 should now have the loaded value, but got 0x%08X\n", psx->cpu.r[2]);
         result = 1;
     }
-    if (cpu->r[3] != 0xDEADBEEF + 1) {
-        fprintf(stderr, "$3 should use old value of $2, but got 0x%08X\n", cpu->r[3]);
+    if (psx->cpu.r[3] != 0xDEADBEEF + 1) {
+        fprintf(stderr, "$3 should use old value of $2, but got 0x%08X\n", psx->cpu.r[3]);
         result = 1;
     }
-    if (cpu->r[4] != 0xCAFEBABE + 1) {
-        fprintf(stderr, "$4 should use new value of $2, but got 0x%08X\n", cpu->r[4]);
+    if (psx->cpu.r[4] != 0xCAFEBABE + 1) {
+        fprintf(stderr, "$4 should use new value of $2, but got 0x%08X\n", psx->cpu.r[4]);
         result = 1;
     }
 

@@ -15,11 +15,9 @@ typedef struct Bus {
     uint8_t* bios;
 } Bus;
 
-Bus* bus_create(void);
+void bus_init(Bus *bus);
 void bus_destroy(Bus *bus);
 void bus_reset(Bus *bus);
-void bus_install_bios_trampolines(PSX *psx);
-void bus_clear_bios_trampolines(PSX *psx);
 
 #ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"
