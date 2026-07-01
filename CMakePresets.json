@@ -1,0 +1,31 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "debug",
+            "displayName": "GCC 16.1.0 x86_64-w64-mingw32 (ucrt64)",
+            "description": "Using compilers: C = C:\\Users\\David\\scoop\\apps\\msys2\\current\\ucrt64\\bin\\gcc.exe, CXX = C:\\Users\\David\\scoop\\apps\\msys2\\current\\ucrt64\\bin\\g++.exe",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "C:/Users/David/scoop/apps/msys2/current/ucrt64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "C:/Users/David/scoop/apps/msys2/current/ucrt64/bin/g++.exe",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "GCC 16.1.0 x86_64-w64-mingw32 (ucrt64)",
+            "description": "Using compilers: C = C:\\Users\\David\\scoop\\apps\\msys2\\current\\ucrt64\\bin\\gcc.exe, CXX = C:\\Users\\David\\scoop\\apps\\msys2\\current\\ucrt64\\bin\\g++.exe",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "C:/Users/David/scoop/apps/msys2/current/ucrt64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "C:/Users/David/scoop/apps/msys2/current/ucrt64/bin/g++.exe",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ]
+}
