@@ -4,7 +4,12 @@
 #include "tty.h"
 #include "cpu.h"
 #include "psx.h"
+
+#ifdef SINGLE_STEP_TEST_MODE
+#include "single_step_bus.h"
+#else
 #include "bus_access.h"
+#endif
 
 TTY *tty_create(void) {
     TTY *tty = (TTY *)malloc(sizeof(TTY));

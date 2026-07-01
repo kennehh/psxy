@@ -2,6 +2,7 @@ add_library(psxy_test
     ../src/psx.c
     ../src/bus.c
     ../src/cpu.c
+    ../src/tty.c
     ../src/exceptions.c
 )
 target_include_directories(psxy_test PUBLIC ../src)
@@ -12,7 +13,7 @@ target_link_libraries(test_bus PRIVATE psxy_test)
 add_executable(test_cpu test_cpu.c)
 target_link_libraries(test_cpu PRIVATE psxy_test)
 
-add_executable(test_single_step test_single_step.c ../src/cpu.c ../src/exceptions.c)
+add_executable(test_single_step test_single_step.c ../src/cpu.c ../src/exceptions.c ../src/tty.c)
 target_link_libraries(test_single_step PRIVATE json-c)
 target_include_directories(test_single_step PRIVATE ../src .)
 target_compile_definitions(test_single_step PRIVATE SINGLE_STEP_TEST_MODE)

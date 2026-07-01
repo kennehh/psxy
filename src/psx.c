@@ -31,3 +31,7 @@ void psx_reset(PSX *psx) {
     bus_install_bios_trampolines(psx);
     tty_reset(psx->tty);
 }
+
+void psx_run(PSX *psx, uint32_t cycles) {
+    cpu_run(psx, cycles);
+}

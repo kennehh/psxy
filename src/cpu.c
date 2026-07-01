@@ -5,6 +5,8 @@
 #include "psx.h"
 #include "exceptions.h"
 #include "cpu.h"
+#include "tty.h"
+
 #ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"
 #else
@@ -744,6 +746,74 @@ uint32_t cpu_step(PSX *psx) {
     cpu_execute(psx);
     cpu_finish_step(cpu);
     return cpu->pc;
+}
+
+uint32_t cpu_run(PSX *psx, uint32_t cycles) {
+    Cpu *cpu = psx->cpu;
+
+    // Use the computed goto technique for faster instruction dispatch
+    static void *opcode_table[64] = {
+        [1 ... 63] = &&label_invalid,
+        [0] = &&label_special,
+        #define X(opcode, name) [opcode] = &&label_##name,
+        OPCODE_TABLE
+        #undef X
+    };
+
+    static void *funct_table[64] = {
+        [0 ... 63] = &&label_invalid,
+        #define X(funct, name) [funct] = &&label_##name,
+        FUNCT_TABLE
+        #undef X
+    };
+
+label_fetch:
+    if (cycles-- == 0) {
+        return cpu->pc;
+    }
+
+    cpu_begin_step(cpu);
+
+    if (unlikely(cpu->pc & 3)) {
+        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
+        goto label_finish;
+    }
+
+    cpu->inst = bus_fetch32(psx, cpu->pc);
+
+    if (cpu->inst == 0) {
+        goto label_finish; // Skip execution for NOP
+    }
+
+    // Dispatch to the appropriate instruction handler using computed goto
+    void *label = opcode_table[OPCODE(cpu)];
+    goto *label;
+
+label_special:
+    label = funct_table[FUNCT(cpu)];
+    goto *label;
+
+#define X(opcode, name) \
+label_##name: \
+    execute_##name(psx); \
+    goto label_finish;
+OPCODE_TABLE
+#undef X
+
+#define X(funct, name) \
+label_##name: \
+    execute_##name(psx); \
+    goto label_finish;
+FUNCT_TABLE
+#undef X
+
+label_invalid:
+    cpu->next_exc_code = EXC_RI; // Reserved instruction exception
+    goto label_finish;
+
+label_finish:
+    cpu_finish_step(cpu);
+    goto label_fetch;
 }
 
 Cpu *cpu_create(void) {

@@ -12,16 +12,12 @@
 #define TARGET_PC 0x80030000
 
 static void benchmark(PSX *psx) {
-    uint32_t instructions_executed = 0;
+    uint32_t instructions_executed = 8000000;
     uint32_t max_steps = 8000000;
 
     uint64_t start = get_time_ns();
 
-    while (instructions_executed < max_steps) {
-        // tty_maybe_putchar(psx->tty, psx->cpu);
-        cpu_step(psx); instructions_executed++;
-        // printf("PC: 0x%08X, Instruction: 0x%08X\n", cpu->pc, cpu->inst);
-    }
+    psx_run(psx, max_steps);
 
     uint64_t end = get_time_ns();
 
@@ -33,16 +29,19 @@ static void benchmark(PSX *psx) {
 }
 
 static void run_until_kernel_init(PSX *psx) {
-    uint32_t steps = 0;
-    while (steps++ < MAX_STEPS) {
-        // tty_maybe_putchar(tty, cpu);
-        // cpu_step(cpu, bus);
-        // tty_maybe_putchar(psx->tty, psx->cpu);
-        cpu_step(psx);
-        if (psx->cpu->pc == TARGET_PC) {
-            break;
-        }
-    }
+    // uint32_t steps = 0;
+    // while (steps++ < MAX_STEPS) {
+    //     // tty_maybe_putchar(tty, cpu);
+    //     // cpu_step(cpu, bus);
+    //     // tty_maybe_putchar(psx->tty, psx->cpu);
+    //     // cpu_step_block(psx);
+    //     cpu_step(psx);
+    //     if (psx->cpu->pc == TARGET_PC) {
+    //         break;
+    //     }
+    // }
+
+    psx_run(psx, 928684);
 }
 
 int main(void) {
@@ -50,9 +49,9 @@ int main(void) {
 
     for (int i = 0; i < 10; i++) {
         psx_reset(psx);
-        load_bios(psx, "roms/openbios.bin");
+        load_bios(psx, "C:\\Projects\\code\\psxy\\roms\\openbios.bin");
         run_until_kernel_init(psx);
-        load_exe(psx, "roms/psxtest_cpu.exe");
+        load_exe(psx, "C:\\Projects\\code\\psxy\\roms\\psxtest_cpu.exe");
 
         printf("Benchmark iteration %d\n", i + 1);
         benchmark(psx);

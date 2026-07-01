@@ -23,7 +23,6 @@ void bus_clear_bios_trampolines(PSX *psx);
 
 #ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"
-#else
-
 #endif // SINGLE_STEP_TEST_MODE
+
 #endif // BUS_H

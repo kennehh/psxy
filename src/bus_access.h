@@ -1,6 +1,8 @@
 #ifndef BUS_ACCESS_H
 #define BUS_ACCESS_H
 
+#include <string.h>
+#include <stdint.h>
 #include "psx.h"
 
 static inline uint8_t io_read8(PSX *psx, uint32_t addr) {

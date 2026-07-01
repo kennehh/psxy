@@ -15,5 +15,6 @@ typedef struct PSX {
 PSX *psx_create(void);
 void psx_destroy(PSX *psx);
 void psx_reset(PSX *psx);
+void psx_run(PSX *psx, uint32_t cycles);
 
 #endif // PSX_H
