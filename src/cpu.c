@@ -187,27 +187,6 @@ static inline void reg_write(Cpu *cpu, uint8_t reg, uint32_t value) {
     cpu->r[reg] = value;
 }
 
-static inline void cpu_write8(PSX *psx, uint32_t addr, uint8_t value) {
-    if (IS_CACHE_ISOLATED(psx->cpu.cop0.status)) {
-        return;
-    }
-    bus_write8(psx, addr, value);
-}
-
-static inline void cpu_write16(PSX *psx, uint32_t addr, uint16_t value) {
-    if (IS_CACHE_ISOLATED(psx->cpu.cop0.status)) {
-        return;
-    }
-    bus_write16(psx, addr, value);
-}
-
-static inline void cpu_write32(PSX *psx, uint32_t addr, uint32_t value) {
-    if (IS_CACHE_ISOLATED(psx->cpu.cop0.status)) {
-        return;
-    }
-    bus_write32(psx, addr, value);
-}
-
 static inline void schedule_load(Cpu *cpu, uint8_t reg, uint32_t value) {
     if (cpu->load_reg == reg) {
         cpu->load_reg = 0; // Clear the load register to prevent double loading
@@ -528,74 +507,96 @@ static inline void execute_lwr(PSX *psx) {
 
 static inline void execute_sb(PSX *psx) {
     Cpu *cpu = &psx->cpu;
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+        return;
+    }
+
     uint32_t addr = get_addr_from_imm(cpu);
     uint8_t value = (uint8_t)reg_read(cpu, RT(cpu));
-    cpu_write8(psx, addr, value);
+    bus_write8(psx, addr, value);
 }
 
 static inline void execute_sh(PSX *psx) {
     Cpu *cpu = &psx->cpu;
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+        return;
+    }
+
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
+
     uint16_t value = (uint16_t)reg_read(cpu, RT(cpu));
-    cpu_write16(psx, addr, value);
+    bus_write16(psx, addr, value);
 }
 
 static inline void execute_sw(PSX *psx) {
     Cpu *cpu = &psx->cpu;
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+        return;
+    }
+
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
         return;
     }
+
     uint32_t value = reg_read(cpu, RT(cpu));
-    cpu_write32(psx, addr, value);
+    bus_write32(psx, addr, value);
 }
 
 static inline void execute_swl(PSX *psx) {
     Cpu *cpu = &psx->cpu;
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+        return;
+    }
+
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t aligned_addr = addr & ~3; // Align address to 4 bytes
     uint32_t value = reg_read(cpu, RT(cpu));
 
     switch (addr & 3) {
         case 0:
-            cpu_write8(psx, aligned_addr, value >> 24);
+            bus_write8(psx, aligned_addr, value >> 24);
             break;
         case 1:
-            cpu_write16(psx, aligned_addr, value >> 16);
+            bus_write16(psx, aligned_addr, value >> 16);
             break;
         case 2:
-            cpu_write16(psx, aligned_addr, value >> 8);
-            cpu_write8(psx, addr, (value >> 24) & 0xFF);
+            bus_write16(psx, aligned_addr, value >> 8);
+            bus_write8(psx, addr, (value >> 24) & 0xFF);
             break;
         case 3:
-            cpu_write32(psx, aligned_addr, value);
+            bus_write32(psx, aligned_addr, value);
             break;
     }
 }
 
 static inline void execute_swr(PSX *psx) {
     Cpu *cpu = &psx->cpu;
+    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+        return;
+    }
+
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t value = reg_read(cpu, RT(cpu));
 
     switch (addr & 3) {
         case 0:
-            cpu_write32(psx, addr, value);
+            bus_write32(psx, addr, value);
             break;
         case 1:
-            cpu_write8(psx, addr, value);
-            cpu_write16(psx, addr + 1, value >> 8);
+            bus_write8(psx, addr, value);
+            bus_write16(psx, addr + 1, value >> 8);
             break;
         case 2:
-            cpu_write16(psx, addr, value);
+            bus_write16(psx, addr, value);
             break;
         case 3:
-            cpu_write8(psx, addr, value);
+            bus_write8(psx, addr, value);
             break;
     }
 }
@@ -665,6 +666,36 @@ static inline void execute_bcond(PSX *psx) {
     } else {
         execute_bltz(psx);
     }
+}
+
+static inline uint32_t fetch_instruction(PSX *psx) {
+    #ifdef SINGLE_STEP_TEST_MODE
+    return bus_fetch32(psx, psx->cpu.pc);
+    #endif
+
+    Cpu *cpu = &psx->cpu;
+    uint32_t pc = cpu->pc;
+    uint32_t page = get_page_index(pc);
+    uint8_t *page_ptr;
+
+    if (likely(page == cpu->fetch_page)) {
+        page_ptr = cpu->fetch_page_ptr;
+    } else {
+        page_ptr = psx->bus.read_pages[page];
+        cpu->fetch_page = page;
+        cpu->fetch_page_ptr = page_ptr;
+    }
+
+    if (unlikely(page_ptr == NULL)) {
+        // Fal
+        // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
+         bus_fetch32(psx, pc);
+    }
+
+    uint32_t inst;
+    uint32_t offest = pc & BUS_PAGE_MASK;
+    memcpy(&inst, page_ptr + offest, sizeof(uint32_t));
+    return inst;
 }
 
 static inline void execute_instruction(PSX *psx) {
@@ -743,7 +774,7 @@ uint32_t cpu_step(PSX *psx) {
         return cpu->pc;
     }
 
-    cpu->inst = bus_fetch32(psx, cpu->pc);
+    cpu->inst = fetch_instruction(psx);
     cpu_execute(psx);
     cpu_finish_step(cpu);
     return cpu->pc;
@@ -773,6 +804,7 @@ label_fetch:
         return cpu->pc;
     }
 
+    // tty_maybe_putchar(&psx->tty, cpu);
     cpu_begin_step(cpu);
 
     if (unlikely(cpu->pc & 3)) {
@@ -780,7 +812,7 @@ label_fetch:
         goto label_finish;
     }
 
-    cpu->inst = bus_fetch32(psx, cpu->pc);
+    cpu->inst = fetch_instruction(psx);
 
     if (cpu->inst == 0) {
         goto label_finish; // Skip execution for NOP
@@ -825,4 +857,6 @@ void cpu_reset(Cpu *cpu) {
     cpu->pc = 0xBFC00000; // Reset vector
     cpu->next_pc = cpu->pc + 4;
     cpu->next_exc_code = EXC_NONE;
+    cpu->fetch_page = BUS_PAGE_COUNT; // Invalidate fetch page
+    cpu->fetch_page_ptr = NULL;
 }

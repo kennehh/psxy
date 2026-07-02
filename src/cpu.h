@@ -27,6 +27,9 @@ typedef struct Cop0 {
 } Cop0;
 
 typedef struct Cpu {
+    uint32_t fetch_page; // current page for instruction fetch
+    uint8_t *fetch_page_ptr; // pointer to the current page for instruction fetch
+
     uint32_t pc; // program counter
     uint32_t next_pc; // next program counter
     uint32_t r[32]; // general purpose registers
