@@ -30,7 +30,9 @@ void raise_exception(Cpu *cpu, uint8_t exc_code) {
         cpu->cop0.badAddr = cpu->pc; // Save the bad virtual address for address errors
     }
 
-    cpu->cop0.status = (cpu->cop0.status & ~0x3F) | ((cpu->cop0.status << 2) & 0x3F); // Shift the current interrupt mask and mode bits left by 2
+    uint32_t status = cpu->cop0.status;
+    status = (status & ~0x3F) | ((status << 2) & 0x3F); // Shift the current interrupt mask and mode bits left by 2
+    set_cop0_status(cpu, status);
 
     // reset CPU state for exception handling
     #ifdef SINGLE_STEP_TEST_MODE

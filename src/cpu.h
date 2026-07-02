@@ -56,6 +56,11 @@ typedef struct Cpu {
     Cop0 cop0; // coprocessor 0 state
 } Cpu;
 
+static inline void set_cop0_status(Cpu *cpu, uint32_t value) {
+    cpu->cop0.status = value;
+    cpu->cop0.cache_isolated = (value & 0x00010000) ? 1 : 0;
+}
+
 void cpu_reset(Cpu *cpu);
 
 uint32_t cpu_step(PSX *psx);

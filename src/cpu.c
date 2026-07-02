@@ -601,14 +601,13 @@ static inline void execute_swr(PSX *psx) {
 
 static inline void cop0_write(Cpu *cpu, uint8_t rd, uint32_t value) {
     switch (rd) {
-        case 3:  cpu->cop0.bpc = value;       break;
-        case 5:  cpu->cop0.bda = value;       break;
-        case 6:  cpu->cop0.tar = value;       break;
-        case 7:  cpu->cop0.dcic = value;      break;
-        case 9:  cpu->cop0.bdam = value;      break;
+        case 3:  cpu->cop0.bpc = value;  break;
+        case 5:  cpu->cop0.bda = value;  break;
+        case 6:  cpu->cop0.tar = value;  break;
+        case 7:  cpu->cop0.dcic = value; break;
+        case 9:  cpu->cop0.bdam = value; break;
         case 12: {
-            cpu->cop0.status = value;
-            cpu->cop0.cache_isolated = (value & 0x00010000) ? 1 : 0;
+            set_cop0_status(cpu, value);
             break;
         }
     }
@@ -617,15 +616,15 @@ static inline void cop0_write(Cpu *cpu, uint8_t rd, uint32_t value) {
 static inline void cop0_read(Cpu *cpu) {
     uint32_t value = 0;
     switch (RD(cpu)) {
-        case 3:  value = cpu->cop0.bpc;       break;
-        case 5:  value = cpu->cop0.bda;       break;
-        case 6:  value = cpu->cop0.tar;       break;
-        case 7:  value = cpu->cop0.dcic;      break;
-        case 8:  value = cpu->cop0.badAddr;   break;
-        case 12: value = cpu->cop0.status;    break;
-        case 13: value = cpu->cop0.cause;     break;
-        case 14: value = cpu->cop0.epc;       break;
-        case 15: value = cpu->cop0.prid;      break;
+        case 3:  value = cpu->cop0.bpc;     break;
+        case 5:  value = cpu->cop0.bda;     break;
+        case 6:  value = cpu->cop0.tar;     break;
+        case 7:  value = cpu->cop0.dcic;    break;
+        case 8:  value = cpu->cop0.badAddr; break;
+        case 12: value = cpu->cop0.status;  break;
+        case 13: value = cpu->cop0.cause;   break;
+        case 14: value = cpu->cop0.epc;     break;
+        case 15: value = cpu->cop0.prid;    break;
     }
     schedule_load(cpu, RT(cpu), value);
 }
@@ -639,7 +638,7 @@ static inline void execute_cop0(PSX *psx) {
         case 0x04: // MTC0
             cop0_write(cpu, RD(cpu), reg_read(cpu, RT(cpu)));
             break;
-        case 0x10: {// RFE
+        case 0x10: { // RFE
             uint32_t stat = cpu->cop0.status;
             cpu->cop0.status = (stat & ~0x0F) | ((stat >> 2) & 0x0F);
             break;
@@ -680,7 +679,7 @@ static inline uint32_t fetch_instruction(PSX *psx) {
     uint32_t page = get_page_index(pc);
     uint8_t *page_ptr;
 
-    if (likely(page == cpu->fetch_page)) {
+    if (page == cpu->fetch_page) {
         page_ptr = cpu->fetch_page_ptr;
     } else {
         page_ptr = psx->bus.read_pages[page];
@@ -694,8 +693,8 @@ static inline uint32_t fetch_instruction(PSX *psx) {
     }
 
     uint32_t inst;
-    uint32_t offest = pc & BUS_PAGE_MASK;
-    memcpy(&inst, page_ptr + offest, sizeof(uint32_t));
+    uint32_t offset = pc & BUS_PAGE_MASK;
+    memcpy(&inst, page_ptr + offset, sizeof(uint32_t));
     return inst;
 }
 
