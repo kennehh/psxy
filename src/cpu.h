@@ -38,6 +38,9 @@ typedef struct Cpu {
     uint32_t hi; // high register
     uint32_t lo; // low register
 
+    uint32_t r_pages[32]; // current pages for general-purpose registers
+    uint8_t *r_page_ptrs[32]; // current pages for general-purpose registers
+
     uint32_t inst; // current instruction
 
     uint8_t load_reg; // register to load after delay slot
