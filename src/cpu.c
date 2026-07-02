@@ -669,32 +669,27 @@ static inline void execute_bcond(PSX *psx) {
     }
 }
 
-static inline uint32_t fetch_instruction(PSX *psx) {
+static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t **fetch_page_ptr) {
     #ifdef SINGLE_STEP_TEST_MODE
     return bus_fetch32(psx, psx->cpu.pc);
     #endif
 
-    Cpu *cpu = &psx->cpu;
-    uint32_t pc = cpu->pc;
+    uint32_t pc = psx->cpu.pc;
     uint32_t page = get_page_index(pc);
-    uint8_t *page_ptr;
 
-    if (page == cpu->fetch_page) {
-        page_ptr = cpu->fetch_page_ptr;
-    } else {
-        page_ptr = psx->bus.read_pages[page];
-        cpu->fetch_page = page;
-        cpu->fetch_page_ptr = page_ptr;
+    if (page != *fetch_page) {
+        *fetch_page_ptr = psx->bus.read_pages[page];
+        *fetch_page = page;
     }
 
-    if (unlikely(page_ptr == NULL)) {
+    if (unlikely(*fetch_page_ptr == NULL)) {
         // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
         return bus_fetch32(psx, pc);
     }
 
     uint32_t inst;
     uint32_t offset = pc & BUS_PAGE_MASK;
-    memcpy(&inst, page_ptr + offset, sizeof(uint32_t));
+    memcpy(&inst, *fetch_page_ptr + offset, sizeof(uint32_t));
     return inst;
 }
 
@@ -774,7 +769,7 @@ uint32_t cpu_step(PSX *psx) {
         return cpu->pc;
     }
 
-    cpu->inst = fetch_instruction(psx);
+    cpu->inst = fetch_instruction(psx, &cpu->fetch_page, &cpu->fetch_page_ptr);
     cpu_execute(psx);
     cpu_finish_step(cpu);
     return cpu->pc;
@@ -782,6 +777,8 @@ uint32_t cpu_step(PSX *psx) {
 
 uint32_t cpu_run(PSX *psx, uint32_t cycles) {
     Cpu *cpu = &psx->cpu;
+    uint32_t fetch_page = cpu->fetch_page;
+    uint8_t *fetch_page_ptr = cpu->fetch_page_ptr;
 
     // Use the computed goto technique for faster instruction dispatch
     static void *opcode_table[64] = {
@@ -812,19 +809,17 @@ label_fetch:
         goto label_finish;
     }
 
-    cpu->inst = fetch_instruction(psx);
+    cpu->inst = fetch_instruction(psx, &fetch_page, &fetch_page_ptr);
 
     if (cpu->inst == 0) {
         goto label_finish; // Skip execution for NOP
     }
 
     // Dispatch to the appropriate instruction handler using computed goto
-    void *label = opcode_table[OPCODE(cpu)];
-    goto *label;
+    goto *opcode_table[OPCODE(cpu)];
 
 label_special:
-    label = funct_table[FUNCT(cpu)];
-    goto *label;
+    goto *funct_table[FUNCT(cpu)];
 
 #define X(opcode, name) \
 label_##name: \
