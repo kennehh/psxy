@@ -690,7 +690,7 @@ static inline uint32_t fetch_instruction(PSX *psx) {
 
     if (unlikely(page_ptr == NULL)) {
         // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
-        bus_fetch32(psx, pc);
+        return bus_fetch32(psx, pc);
     }
 
     uint32_t inst;
