@@ -149,7 +149,7 @@ static inline void execute_##name(PSX *psx) { \
     uint32_t pc = get_next_pc(cpu); \
     cpu->next_branch_target = pc + (SIMM_EXT(cpu) << 2); \
     cpu->next_branch_state = ((condition) << 1) | BRANCH_STATE_IN_DELAY_SLOT; \
-    save_return_address(psx, 31, pc + 4); \
+    reg_write(cpu, 31, pc + 4); \
 }
 
 static inline uint32_t get_next_pc(Cpu *cpu) {
@@ -216,20 +216,6 @@ static inline bool sub_overflow_check(uint32_t a, uint32_t b, uint32_t result) {
     return ((a ^ b) & (a ^ result) & 0x80000000) != 0;
 }
 
-static inline void save_return_address(PSX *psx, uint8_t reg, uint32_t return_address) {
-    Cpu *cpu = &psx->cpu;
-    reg_write(cpu, reg, return_address);
-
-    uint32_t page = get_page_index(return_address);
-    if (page == cpu->fetch_page) {
-        cpu->r_pages[reg] = page;
-        cpu->r_page_ptrs[reg] = cpu->fetch_page_ptr;
-    } else {
-        cpu->r_pages[reg] = BUS_PAGE_COUNT; // Invalidate the register page mapping
-        cpu->r_page_ptrs[reg] = NULL; // Clear the register page pointer
-    }
-}
-
 OP_R_SHAMT(sll, value << SHAMT(cpu))
 OP_R_SHAMT(srl, value >> SHAMT(cpu))
 OP_R_SHAMT(sra, (int32_t)value >> SHAMT(cpu)) // Arithmetic right shift
@@ -265,18 +251,15 @@ OP_I_BRANCH_Z_LINK(bltzal, (int32_t)rs < 0)
 
 static inline void execute_jr(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    uint8_t reg = RS(cpu);
-    uint32_t target = reg_read(cpu, reg);
+    uint32_t target = reg_read(cpu, RS(cpu));
     cpu->next_branch_target = target;
     cpu->next_branch_state = BRANCH_STATE_TAKEN;
-    cpu->fetch_page = cpu->r_pages[reg];
-    cpu->fetch_page_ptr = cpu->r_page_ptrs[reg];
 }
 
 static inline void execute_jalr(PSX *psx) {
     Cpu *cpu = &psx->cpu;
     execute_jr(psx); // Jump to target address
-    save_return_address(psx, RD(cpu), get_next_pc(cpu) + 4); // Save return address in rd
+    reg_write(cpu, RD(cpu), get_next_pc(cpu) + 4); // Save return address
 }
 
 static inline void execute_mfhi(PSX *psx) {
@@ -380,7 +363,7 @@ static inline void execute_jal(PSX *psx) {
     Cpu *cpu = &psx->cpu;
     uint32_t pc = get_next_pc(cpu);
     uint32_t target = (pc & 0xF0000000) | (TARGET(cpu) << 2);
-    save_return_address(psx, 31, pc + 4); // Save return address in $ra
+    reg_write(cpu, 31, pc + 4); // Save return address in $ra
     cpu->next_branch_target = target;
     cpu->next_branch_state = BRANCH_STATE_TAKEN;
 }
@@ -876,9 +859,4 @@ void cpu_reset(Cpu *cpu) {
     cpu->next_exc_code = EXC_NONE;
     cpu->fetch_page = BUS_PAGE_COUNT; // Invalidate fetch page
     cpu->fetch_page_ptr = NULL;
-
-    for (int i = 0; i < 32; i++) {
-        cpu->r_pages[i] = BUS_PAGE_COUNT; // Invalidate register page mappings
-        cpu->r_page_ptrs[i] = NULL;
-    }
 }
