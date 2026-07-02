@@ -24,8 +24,6 @@
 #define SIMM_EXT(cpu) ((uint32_t)(int16_t)(cpu->inst & 0xFFFF))
 #define TARGET(cpu) (cpu->inst & 0x3FFFFFF)
 
-#define IS_CACHE_ISOLATED(status) (unlikely((status) & 0x00010000))
-
 #define OPCODE_TABLE \
     X(0x01, bcond) \
     X(0x02, j) \
@@ -507,7 +505,7 @@ static inline void execute_lwr(PSX *psx) {
 
 static inline void execute_sb(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (unlikely(cpu->cop0.cache_isolated)) {
         return;
     }
 
@@ -518,7 +516,7 @@ static inline void execute_sb(PSX *psx) {
 
 static inline void execute_sh(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (unlikely(cpu->cop0.cache_isolated)) {
         return;
     }
 
@@ -534,7 +532,7 @@ static inline void execute_sh(PSX *psx) {
 
 static inline void execute_sw(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (unlikely(cpu->cop0.cache_isolated)) {
         return;
     }
 
@@ -550,7 +548,7 @@ static inline void execute_sw(PSX *psx) {
 
 static inline void execute_swl(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (unlikely(cpu->cop0.cache_isolated)) {
         return;
     }
 
@@ -577,7 +575,7 @@ static inline void execute_swl(PSX *psx) {
 
 static inline void execute_swr(PSX *psx) {
     Cpu *cpu = &psx->cpu;
-    if (IS_CACHE_ISOLATED(cpu->cop0.status)) {
+    if (unlikely(cpu->cop0.cache_isolated)) {
         return;
     }
 
@@ -608,7 +606,11 @@ static inline void cop0_write(Cpu *cpu, uint8_t rd, uint32_t value) {
         case 6:  cpu->cop0.tar = value;       break;
         case 7:  cpu->cop0.dcic = value;      break;
         case 9:  cpu->cop0.bdam = value;      break;
-        case 12: cpu->cop0.status = value;    break;
+        case 12: {
+            cpu->cop0.status = value;
+            cpu->cop0.cache_isolated = (value & 0x00010000) ? 1 : 0;
+            break;
+        }
     }
 }
 
@@ -687,9 +689,8 @@ static inline uint32_t fetch_instruction(PSX *psx) {
     }
 
     if (unlikely(page_ptr == NULL)) {
-        // Fal
         // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
-         bus_fetch32(psx, pc);
+        bus_fetch32(psx, pc);
     }
 
     uint32_t inst;

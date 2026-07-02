@@ -24,6 +24,8 @@ typedef struct Cop0 {
     uint32_t cause; // Cause of last exception
     uint32_t epc; // Exception Program Counter
     uint32_t prid; // Processor Revision ID
+
+    uint8_t cache_isolated; // Cache isolation flag
 } Cop0;
 
 typedef struct Cpu {
