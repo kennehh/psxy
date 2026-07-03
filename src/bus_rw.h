@@ -1,9 +1,13 @@
-#ifndef BUS_ACCESS_H
-#define BUS_ACCESS_H
+#ifndef BUS_RW_H
+#define BUS_RW_H
 
 #include <string.h>
 #include <stdint.h>
 #include "psx.h"
+
+#ifdef SINGLE_STEP_TEST_MODE
+#include "single_step_bus.h"
+#else
 
 static inline uint8_t io_read8(PSX *psx, uint32_t addr) {
     return 0; // Placeholder for I/O read implementation
@@ -119,4 +123,5 @@ static inline void bus_write32(PSX *psx, uint32_t addr, uint32_t value) {
     memcpy(page_ptr + offset, &value, sizeof(uint32_t));
 }
 
-#endif // BUS_ACCESS_H
+#endif // SINGLE_STEP_TEST_MODE
+#endif // BUS_RW_H

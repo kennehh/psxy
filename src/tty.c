@@ -8,7 +8,7 @@
 #ifdef SINGLE_STEP_TEST_MODE
 #include "single_step_bus.h"
 #else
-#include "bus_access.h"
+#include "bus_rw.h"
 #endif
 
 void tty_init(TTY *tty) {

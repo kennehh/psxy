@@ -1,6 +1,6 @@
 #include "cpu.h"
 #include "psx.h"
-#include "bus_access.h"
+#include "bus_rw.h"
 #include <stdio.h>
 
 #define ITYPE(opcode, rs, rt, imm) (((opcode & 0x3F) << 26) | ((rs & 0x1F) << 21) | ((rt & 0x1F) << 16) | (imm & 0xFFFF))

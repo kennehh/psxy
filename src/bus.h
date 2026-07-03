@@ -19,8 +19,4 @@ void bus_init(Bus *bus);
 void bus_destroy(Bus *bus);
 void bus_reset(Bus *bus);
 
-#ifdef SINGLE_STEP_TEST_MODE
-#include "single_step_bus.h"
-#endif // SINGLE_STEP_TEST_MODE
-
 #endif // BUS_H

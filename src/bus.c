@@ -3,12 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "bus.h"
-
-#ifdef SINGLE_STEP_TEST_MODE
-#include "single_step_bus.h"
-#else
-#include "bus_access.h"
-#endif
+#include "bus_rw.h"
 
 static void map_buffer(Bus *bus, uint8_t *buffer, size_t size, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "psx.h"
-#include "bus_access.h"
+#include "bus_rw.h"
 
 #define KSEG0_VIRT_START 0x80000000
 #define KSEG1_VIRT_START 0xA0000000

@@ -3,12 +3,7 @@
 #include <string.h>
 #include "psx.h"
 #include "loader.h"
-
-#ifdef SINGLE_STEP_TEST_MODE
-#include "single_step_bus.h"
-#else
-#include "bus_access.h"
-#endif
+#include "bus_rw.h"
 
 void load_bios(PSX *psx, const char *bios_path) {
     FILE *bios_file = fopen(bios_path, "rb");

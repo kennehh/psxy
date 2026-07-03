@@ -6,12 +6,7 @@
 #include "exceptions.h"
 #include "cpu.h"
 #include "tty.h"
-
-#ifdef SINGLE_STEP_TEST_MODE
-#include "single_step_bus.h"
-#else
-#include "bus_access.h"
-#endif
+#include "bus_rw.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)
