@@ -23,6 +23,7 @@ add_library(psxy_core
     src/loader.c
     src/gpu.c
     src/irq.c
+    src/timers.c
 )
 
 target_include_directories(psxy_core PRIVATE src)

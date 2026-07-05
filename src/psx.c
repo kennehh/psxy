@@ -4,6 +4,7 @@
 #include "tty.h"
 #include "psx.h"
 #include "loader.h"
+#include "timers.h"
 
 PSX *psx_create(void) {
     PSX *psx = (PSX *)malloc(sizeof(PSX));
@@ -15,9 +16,12 @@ PSX *psx_create(void) {
     cpu_reset(&psx->cpu);
     gpu_init(&psx->gpu);
     tty_init(&psx->tty);
-#ifdef PSXY_SINGLE_STEP_TEST_MODE
+    timers_reset(&psx->timers);
+
+#ifndef PSXY_SINGLE_STEP_TEST_MODE
     load_bios_trampolines(psx);
 #endif
+
     return psx;
 }
 
@@ -36,7 +40,9 @@ void psx_reset(PSX *psx) {
     tty_reset(&psx->tty);
     gpu_reset(&psx->gpu);
     irq_reset(&psx->irq);
-#ifdef PSXY_SINGLE_STEP_TEST_MODE
+    timers_reset(&psx->timers);
+
+#ifndef PSXY_SINGLE_STEP_TEST_MODE
     load_bios_trampolines(psx);
 #endif
 }

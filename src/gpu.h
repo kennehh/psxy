@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include "common.h"
 
 typedef struct Gpu {
     uint16_t *vram;
@@ -32,25 +33,11 @@ void gpu_init(Gpu *gpu);
 void gpu_reset(Gpu *gpu);
 void gpu_destroy(Gpu *gpu);
 
-static inline void gpu_write_gp0(Gpu *gpu, uint32_t value) {
-    // printf("GPU GP0 write: 0x%08X\n", value);
-}
-
-static inline void gpu_write_gp1(Gpu *gpu, uint32_t value) {
-    // printf("GPU GP1 write: 0x%08X\n", value);
-}
-
-static inline uint32_t gpu_read_gp0(Gpu *gpu) {
-    // printf("GPU GP0 read\n");
-    return 0;
-}
-
-static inline uint32_t gpu_read_gp1(Gpu *gpu) {
-    // printf("GPU GP1 read\n");
-    // return gpu->status;
-    return 0x1c802000; // gpu ready
-}
-
-
+uint8_t gpu_read8(PSX *psx, uint32_t addr);
+uint16_t gpu_read16(PSX *psx, uint32_t addr);
+uint32_t gpu_read32(PSX *psx, uint32_t addr);
+void gpu_write8(PSX *psx, uint32_t addr, uint8_t value);
+void gpu_write16(PSX *psx, uint32_t addr, uint16_t value);
+void gpu_write32(PSX *psx, uint32_t addr, uint32_t value);
 
 #endif // GPU_H

@@ -2,11 +2,13 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+
 #include "psx.h"
 #include "loader.h"
 #include "tty.h"
 #include "hrtime.h"
-#include <string.h>
+
 
 #define MAX_STEPS 10000000
 #define TARGET_PC 0x80030000
@@ -47,14 +49,14 @@ static void run_until_kernel_init(PSX *psx) {
 int main(void) {
     PSX* psx = psx_create();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         psx_reset(psx);
         load_bios(psx, "roms/SCPH1001.BIN");
         run_until_kernel_init(psx);
-        load_exe(psx, "roms/psxtest_cpu.exe");
+        // load_exe(psx, "roms/psxtest_cpu.exe");
 
-        printf("Benchmark iteration %d\n", i + 1);
-        benchmark(psx);
+        // printf("Benchmark iteration %d\n", i + 1);
+        // benchmark(psx);
     }
 
     psx_destroy(psx);

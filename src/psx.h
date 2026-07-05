@@ -8,6 +8,8 @@
 #include "gpu.h"
 #include "irq.h"
 #include "cop0.h"
+#include "timers.h"
+
 typedef struct PSX {
     Cpu cpu;
     Cop0 cop0;
@@ -15,6 +17,7 @@ typedef struct PSX {
     Gpu gpu;
     TTY tty;
     Irq irq;
+    Timers timers;
 } PSX;
 
 PSX *psx_create(void);
