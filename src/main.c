@@ -51,10 +51,10 @@ int main(void) {
         psx_reset(psx);
         load_bios(psx, "roms/SCPH1001.BIN");
         run_until_kernel_init(psx);
-        // load_exe(psx, "roms/psxtest_cpu.exe");
+        load_exe(psx, "roms/psxtest_cpu.exe");
 
-        // printf("Benchmark iteration %d\n", i + 1);
-        // benchmark(psx);
+        printf("Benchmark iteration %d\n", i + 1);
+        benchmark(psx);
     }
 
     psx_destroy(psx);

@@ -1,9 +1,9 @@
 #define _GNU_SOURCE
 
+#include "single_step_bus.h"
 #include "cpu.h"
 #include "psx.h"
-#include "exceptions.h"
-#include "single_step_bus.h"
+#include "cop0.h"
 #include <stdio.h>
 #include <assert.h>
 #include <json-c/json.h>
@@ -89,14 +89,17 @@ void set_state(State *state, struct json_object *json_state) {
     }
 }
 
-void set_state_from_cpu(State *state, Cpu *cpu) {
+void set_state_from_psx(State *state, PSX *psx) {
+    Cpu *cpu = &psx->cpu;
+    Cop0 *cop0 = &psx->cop0;
+
     for (int i = 0; i < 32; i++) {
         state->R[i] = cpu->r[i];
     }
     state->hi = cpu->hi;
     state->lo = cpu->lo;
-    state->EPC = cpu->cop0.epc;
-    state->CAUSE = cpu->cop0.cause;
+    state->EPC = cop0->epc;
+    state->CAUSE = cop0->cause;
     state->PC = cpu->pc;
 
     state->delay.load_slot = cpu->branch_state & BRANCH_STATE_IN_DELAY_SLOT;
@@ -106,14 +109,17 @@ void set_state_from_cpu(State *state, Cpu *cpu) {
     state->delay.branch_val = cpu->load_value;
 }
 
-void set_cpu_from_state(Cpu *cpu, State *state) {
+void set_psx_from_state(PSX *psx, State *state) {
+    Cpu *cpu = &psx->cpu;
+    Cop0 *cop0 = &psx->cop0;
+
     for (int i = 0; i < 32; i++) {
         cpu->r[i] = state->R[i];
     }
     cpu->hi = state->hi;
     cpu->lo = state->lo;
-    cpu->cop0.epc = state->EPC;
-    cpu->cop0.cause = state->CAUSE;
+    cop0->epc = state->EPC;
+    cop0->cause = state->CAUSE;
     cpu->pc = state->PC;
     cpu->next_pc = state->PC + 4;
     cpu->next_exc_code = EXC_NONE;
@@ -134,6 +140,7 @@ void set_cycles(Cycle *cycle_array, struct json_object *json_cycles) {
 
     // cycles is stored in the JSON as an array of objects
     if (json_cycles && json_object_get_type(json_cycles) == json_type_array) {
+        printf("Setting up %d cycles\n", json_object_array_length(json_cycles));
         cycle_count = json_object_array_length(json_cycles);
         cycles = malloc(sizeof(Cycle) * cycle_count);
 
@@ -154,13 +161,14 @@ void set_cycles(Cycle *cycle_array, struct json_object *json_cycles) {
     }
 }
 
-int test_file(const char *filename, Cpu *cpu) {
+int test_file(const char *filename, PSX *psx) {
     FILE* jsonl_file = fopen(filename, "r");
     if (!jsonl_file) {
         perror("Failed to open JSONL file");
         return 1;
     }
 
+    Cpu *cpu = &psx->cpu;
     char line[4096];
     size_t len = 0;
     size_t line_count = 0;
@@ -193,11 +201,11 @@ int test_file(const char *filename, Cpu *cpu) {
         set_state(final, final_json);
         set_cycles(cycles, cycles_json);
 
-        set_cpu_from_state(cpu, initial);
+        set_psx_from_state(psx, initial);
 
         cpu_step(psx);
 
-        set_state_from_cpu(actual, cpu);
+        set_state_from_psx(actual, psx);
 
         // Compare actual state with expected final state
         if (memcmp(actual, final, sizeof(State)) != 0) {
@@ -265,7 +273,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    test_file(argv[1], &psx->cpu);
+    test_file(argv[1], psx);
 
     free(initial);
     free(final);

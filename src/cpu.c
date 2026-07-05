@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "psx.h"
-#include "exceptions.h"
+#include "cop0.h"
 #include "cpu.h"
 #include "tty.h"
 #include "bus_rw.h"
@@ -189,8 +189,9 @@ static inline void schedule_load(Cpu *cpu, uint8_t reg, uint32_t value) {
 }
 
 static inline void commit_load(Cpu *cpu) {
-    if (cpu->load_reg > 0) {
-        cpu->r[cpu->load_reg] = cpu->load_value;
+    uint8_t reg = cpu->load_reg;
+    if (reg > 0) {
+        cpu->r[reg] = cpu->load_value;
     }
     cpu->load_reg = cpu->next_load_reg;
     cpu->load_value = cpu->next_load_value;
@@ -460,6 +461,9 @@ static inline void execute_lwl(PSX *psx) {
             result = bus_read32(psx, aligned_addr);
             break;
         }
+        default:
+            result = 0; // This case should never happen
+            break;
     }
 
     schedule_load(cpu, RT(cpu), result);
@@ -493,28 +497,31 @@ static inline void execute_lwr(PSX *psx) {
             result = (reg_value & 0xFFFFFF00) | mem_value_8;
             break;
         }
+        default:
+            result = 0; // This case should never happen
+            break;
     }
 
     schedule_load(cpu, RT(cpu), result);
 }
 
 static inline void execute_sb(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (unlikely(cpu->cop0.cache_isolated)) {
+    if (unlikely(psx->cop0.cache_isolated)) {
         return;
     }
 
+    Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint8_t value = (uint8_t)reg_read(cpu, RT(cpu));
     bus_write8(psx, addr, value);
 }
 
 static inline void execute_sh(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (unlikely(cpu->cop0.cache_isolated)) {
+    if (unlikely(psx->cop0.cache_isolated)) {
         return;
     }
 
+    Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 1)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
@@ -526,11 +533,11 @@ static inline void execute_sh(PSX *psx) {
 }
 
 static inline void execute_sw(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (unlikely(cpu->cop0.cache_isolated)) {
+    if (unlikely(psx->cop0.cache_isolated)) {
         return;
     }
 
+    Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     if (unlikely(addr & 3)) {
         cpu->next_exc_code = EXC_ADES; // Address error store
@@ -542,11 +549,11 @@ static inline void execute_sw(PSX *psx) {
 }
 
 static inline void execute_swl(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (unlikely(cpu->cop0.cache_isolated)) {
+    if (unlikely(psx->cop0.cache_isolated)) {
         return;
     }
 
+    Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t aligned_addr = addr & ~3; // Align address to 4 bytes
     uint32_t value = reg_read(cpu, RT(cpu));
@@ -569,11 +576,11 @@ static inline void execute_swl(PSX *psx) {
 }
 
 static inline void execute_swr(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (unlikely(cpu->cop0.cache_isolated)) {
+    if (unlikely(psx->cop0.cache_isolated)) {
         return;
     }
 
+    Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint32_t value = reg_read(cpu, RT(cpu));
 
@@ -591,53 +598,28 @@ static inline void execute_swr(PSX *psx) {
         case 3:
             bus_write8(psx, addr, value);
             break;
-    }
-}
-
-static inline void cop0_write(Cpu *cpu, uint8_t rd, uint32_t value) {
-    switch (rd) {
-        case 3:  cpu->cop0.bpc = value;  break;
-        case 5:  cpu->cop0.bda = value;  break;
-        case 6:  cpu->cop0.tar = value;  break;
-        case 7:  cpu->cop0.dcic = value; break;
-        case 9:  cpu->cop0.bdam = value; break;
-        case 12: {
-            set_cop0_status(cpu, value);
+        default:
+            // This case should never happen
             break;
-        }
     }
-}
-
-static inline void cop0_read(Cpu *cpu) {
-    uint32_t value = 0;
-    switch (RD(cpu)) {
-        case 3:  value = cpu->cop0.bpc;     break;
-        case 5:  value = cpu->cop0.bda;     break;
-        case 6:  value = cpu->cop0.tar;     break;
-        case 7:  value = cpu->cop0.dcic;    break;
-        case 8:  value = cpu->cop0.badAddr; break;
-        case 12: value = cpu->cop0.status;  break;
-        case 13: value = cpu->cop0.cause;   break;
-        case 14: value = cpu->cop0.epc;     break;
-        case 15: value = cpu->cop0.prid;    break;
-    }
-    schedule_load(cpu, RT(cpu), value);
 }
 
 static inline void execute_cop0(PSX *psx) {
     Cpu *cpu = &psx->cpu;
     switch (RS(cpu)) {
-        case 0x00: // MFC0
-            cop0_read(cpu);
-            break;
-        case 0x04: // MTC0
-            cop0_write(cpu, RD(cpu), reg_read(cpu, RT(cpu)));
-            break;
-        case 0x10: { // RFE
-            uint32_t stat = cpu->cop0.status;
-            cpu->cop0.status = (stat & ~0x0F) | ((stat >> 2) & 0x0F);
+        case 0x00: { // MFC0
+            uint32_t value = cop0_read(&psx->cop0, RD(cpu));
+            schedule_load(cpu, RT(cpu), value);
             break;
         }
+        case 0x04: { // MTC0
+            uint32_t value = reg_read(cpu, RT(cpu));
+            cop0_write(&psx->cop0, RD(cpu), value);
+            break;
+        }
+        case 0x10: // RFE
+            cop0_rfe(&psx->cop0);
+            break;
         default:
             cpu->next_exc_code = EXC_RI; // Reserved instruction exception
             break;
@@ -665,7 +647,7 @@ static inline void execute_bcond(PSX *psx) {
 }
 
 static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t **fetch_page_ptr) {
-    #ifdef SINGLE_STEP_TEST_MODE
+    #ifdef PSXY_SINGLE_STEP_TEST_MODE
     return bus_fetch32(psx, psx->cpu.pc);
     #endif
 
@@ -719,7 +701,7 @@ static inline void begin_step(Cpu *cpu) {
     cpu->next_branch_state = BRANCH_STATE_NO_DELAY;
     cpu->next_load_reg = 0;
 
-#ifdef SINGLE_STEP_TEST_MODE
+#ifdef PSXY_SINGLE_STEP_TEST_MODE
     // only next_branch_state and next_load_reg are required to be cleared,
     // but single step tests expect next_branch_target and next_load_value to be cleared as well
     cpu->next_branch_target = 0;
@@ -727,16 +709,10 @@ static inline void begin_step(Cpu *cpu) {
 #endif
 }
 
-static inline void interrupts_pending(Cpu *cpu) {
-    uint32_t status = cpu->cop0.status;
-    uint32_t cause = cpu->cop0.cause;
-    if (status & 0x1) { // Check if interrupts are enabled
-        return;
-    }
-
-    uint32_t pending = cause & status & 0xFF00; // Check for pending interrupts
+static inline void check_interrupts(PSX *psx) {
+    bool pending = cop0_interrupts_pending(&psx->cop0);
     if (pending) {
-        cpu->next_exc_code = EXC_INT; // Set exception code for interrupt
+        psx->cpu.next_exc_code = EXC_INT; // Set exception code for interrupt
     }
 }
 
@@ -745,7 +721,7 @@ static inline void finish_step(PSX *psx) {
     commit_load(cpu); // Commit any scheduled load after executing the instruction
 
     if (unlikely(cpu->next_exc_code != EXC_NONE)) {
-        raise_exception(psx, cpu->next_exc_code);
+        cop0_raise_exception(psx, cpu->next_exc_code);
         return;
     }
 
@@ -753,7 +729,7 @@ static inline void finish_step(PSX *psx) {
     cpu->next_pc = cpu->pc + 4;
     cpu->branch_state = cpu->next_branch_state;
 
-#ifdef SINGLE_STEP_TEST_MODE
+#ifdef PSXY_SINGLE_STEP_TEST_MODE
     // no need to set branch_target if not in delay slot, but single step tests expect it to be set
     cpu->branch_target = cpu->next_branch_target;
 #else
@@ -762,7 +738,7 @@ static inline void finish_step(PSX *psx) {
     }
 #endif
 
-    interrupts_pending(cpu); // Check for any pending interrupts after instruction execution
+    check_interrupts(psx); // Check for any pending interrupts after instruction execution
 }
 
 uint32_t cpu_step(PSX *psx) {
@@ -855,11 +831,9 @@ void cpu_reset(Cpu *cpu) {
     if (!cpu) return;
     memset(cpu, 0, sizeof(Cpu)); // Clear CPU state
     memset(cpu->r, 0, sizeof(cpu->r)); // Clear general-purpose registers
-    memset(&cpu->cop0, 0, sizeof(cpu->cop0)); // Clear COP0 registers
     cpu->pc = 0xBFC00000; // Reset vector
     cpu->next_pc = cpu->pc + 4;
     cpu->next_exc_code = EXC_NONE;
     cpu->fetch_page = BUS_PAGE_COUNT; // Invalidate fetch page
     cpu->fetch_page_ptr = NULL;
-    cpu->cop0.prid = 2;
 }

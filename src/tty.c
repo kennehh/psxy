@@ -217,10 +217,11 @@ void tty_maybe_putchar(TTY *tty, Cpu *cpu) {
 
     switch (pc_func) {
         case 0xA03C: // PC = 0xA0, func_code = 0x3C
-        case 0xB03D: // PC = 0xB0, func_code = 0x3D
+        case 0xB03D: { // PC = 0xB0, func_code = 0x3D
             char c = (char)(cpu->r[4] & 0xFF);
             tty_putchar(tty, c);
             break;
+        }
         default:
             break;
     }

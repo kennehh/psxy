@@ -23,7 +23,7 @@ extern uint8_t cycle_index;
 
 static inline uint32_t consume_read_cycle(uint8_t action, uint8_t size, uint32_t addr) {
     if (cycle_index >= cycle_count) {
-        fprintf(stderr, "No more cycles to consume\n");
+        fprintf(stderr, "No more cycles to consume\n (index: %d, count: %d)\n", cycle_index, cycle_count);
         return 0;
     }
 
@@ -40,7 +40,7 @@ static inline uint32_t consume_read_cycle(uint8_t action, uint8_t size, uint32_t
 
 static inline void consume_write_cycle(uint8_t action, uint8_t size, uint32_t addr, uint32_t val) {
     if (cycle_index >= cycle_count) {
-        fprintf(stderr, "No more cycles to consume\n");
+        fprintf(stderr, "No more cycles to consume\n (index: %d, count: %d)\n", cycle_index, cycle_count);
         return;
     }
 

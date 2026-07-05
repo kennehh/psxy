@@ -1,35 +1,26 @@
-add_library(psxy_test
-    ../src/psx.c
-    ../src/loader.c
-    ../src/bus.c
-    ../src/cpu.c
-    ../src/tty.c
-    ../src/exceptions.c
-    ../src/gpu.c
-    ../src/irq.c
-)
-target_include_directories(psxy_test PUBLIC ../src)
-
 add_executable(test_bus test_bus.c)
-target_link_libraries(test_bus PRIVATE psxy_test)
+target_link_libraries(test_bus PRIVATE psxy_core)
+target_include_directories(test_bus PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 add_executable(test_cpu test_cpu.c)
-target_link_libraries(test_cpu PRIVATE psxy_test)
+target_link_libraries(test_cpu PRIVATE psxy_core)
+target_include_directories(test_cpu PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 add_executable(test_single_step
+    ${PROJECT_SOURCE_DIR}/src/psx.c
+    ${PROJECT_SOURCE_DIR}/src/bus.c
+    ${PROJECT_SOURCE_DIR}/src/cpu.c
+    ${PROJECT_SOURCE_DIR}/src/cop0.c
+    ${PROJECT_SOURCE_DIR}/src/tty.c
+    ${PROJECT_SOURCE_DIR}/src/loader.c
+    ${PROJECT_SOURCE_DIR}/src/gpu.c
+    ${PROJECT_SOURCE_DIR}/src/irq.c
     test_single_step.c
-    ../src/psx.c
-    ../src/loader.c
-    ../src/bus.c
-    ../src/cpu.c
-    ../src/tty.c
-    ../src/exceptions.c
-    ../src/gpu.c
-    ../src/irq.c
 )
+target_compile_definitions(test_single_step PRIVATE PSXY_SINGLE_STEP_TEST_MODE)
 target_link_libraries(test_single_step PRIVATE json-c)
-target_include_directories(test_single_step PRIVATE ../src .)
-target_compile_definitions(test_single_step PRIVATE SINGLE_STEP_TEST_MODE)
+target_include_directories(test_single_step PRIVATE ${PROJECT_SOURCE_DIR}/src .)
+
 
 add_test(NAME bus.ram COMMAND test_bus ram)
 add_test(NAME bus.exp1 COMMAND test_bus exp1)

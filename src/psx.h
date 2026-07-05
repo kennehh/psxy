@@ -7,8 +7,10 @@
 #include "tty.h"
 #include "gpu.h"
 #include "irq.h"
+#include "cop0.h"
 typedef struct PSX {
     Cpu cpu;
+    Cop0 cop0;
     Bus bus;
     Gpu gpu;
     TTY tty;

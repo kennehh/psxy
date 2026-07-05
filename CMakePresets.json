@@ -1,0 +1,148 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "gcc-dev",
+      "displayName": "GCC Dev",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PSXY_ENABLE_DEBUGGER": "ON",
+        "PSXY_ENABLE_TRACE": "ON"
+      }
+    },
+
+    {
+      "name": "clang-dev",
+      "displayName": "Clang Dev",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PSXY_ENABLE_DEBUGGER": "ON",
+        "PSXY_ENABLE_TRACE": "ON"
+      }
+    },
+
+    {
+      "name": "gcc-sanitize",
+      "displayName": "GCC Sanitize",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PSXY_ENABLE_SANITIZERS": "ON",
+        "PSXY_ENABLE_DEBUGGER": "ON",
+        "PSXY_ENABLE_TRACE": "ON"
+      }
+    },
+
+    {
+      "name": "clang-sanitize",
+      "displayName": "Clang Sanitize",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PSXY_ENABLE_SANITIZERS": "ON",
+        "PSXY_ENABLE_DEBUGGER": "ON",
+        "PSXY_ENABLE_TRACE": "ON"
+      }
+    },
+
+    {
+      "name": "gcc-profile",
+      "displayName": "GCC Profile",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "PSXY_ENABLE_PROFILING": "ON",
+        "PSXY_ENABLE_DEBUGGER": "OFF",
+        "PSXY_ENABLE_TRACE": "OFF"
+      }
+    },
+
+    {
+      "name": "clang-profile",
+      "displayName": "Clang Profile",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "PSXY_ENABLE_PROFILING": "ON",
+        "PSXY_ENABLE_DEBUGGER": "OFF",
+        "PSXY_ENABLE_TRACE": "OFF"
+      }
+    },
+
+    {
+      "name": "gcc-release",
+      "displayName": "GCC Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_BUILD_TYPE": "Release",
+        "PSXY_ENABLE_DEBUGGER": "OFF",
+        "PSXY_ENABLE_TRACE": "OFF",
+        "PSXY_ENABLE_LTO": "ON"
+      }
+    },
+
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_BUILD_TYPE": "Release",
+        "PSXY_ENABLE_DEBUGGER": "OFF",
+        "PSXY_ENABLE_TRACE": "OFF",
+        "PSXY_ENABLE_LTO": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    { "name": "gcc-dev", "configurePreset": "gcc-dev" },
+    { "name": "clang-dev", "configurePreset": "clang-dev" },
+    { "name": "gcc-sanitize", "configurePreset": "gcc-sanitize" },
+    { "name": "clang-sanitize", "configurePreset": "clang-sanitize" },
+    { "name": "gcc-profile", "configurePreset": "gcc-profile" },
+    { "name": "clang-profile", "configurePreset": "clang-profile" },
+    { "name": "gcc-release", "configurePreset": "gcc-release" },
+    { "name": "clang-release", "configurePreset": "clang-release" }
+  ],
+
+  "testPresets": [
+    {
+      "name": "gcc-test",
+      "displayName": "GCC Test",
+      "configurePreset": "gcc-dev",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 0,
+        "noTestsAction": "error"
+      }
+    }
+  ]
+}

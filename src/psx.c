@@ -15,7 +15,9 @@ PSX *psx_create(void) {
     cpu_reset(&psx->cpu);
     gpu_init(&psx->gpu);
     tty_init(&psx->tty);
+#ifdef PSXY_SINGLE_STEP_TEST_MODE
     load_bios_trampolines(psx);
+#endif
     return psx;
 }
 
@@ -29,11 +31,14 @@ void psx_destroy(PSX *psx) {
 void psx_reset(PSX *psx) {
     if (!psx) return;
     cpu_reset(&psx->cpu);
+    cop0_reset(&psx->cop0);
     bus_reset(&psx->bus);
     tty_reset(&psx->tty);
     gpu_reset(&psx->gpu);
     irq_reset(&psx->irq);
+#ifdef PSXY_SINGLE_STEP_TEST_MODE
     load_bios_trampolines(psx);
+#endif
 }
 
 void psx_run(PSX *psx, uint32_t cycles) {

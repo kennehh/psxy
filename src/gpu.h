@@ -33,20 +33,20 @@ void gpu_reset(Gpu *gpu);
 void gpu_destroy(Gpu *gpu);
 
 static inline void gpu_write_gp0(Gpu *gpu, uint32_t value) {
-    printf("GPU GP0 write: 0x%08X\n", value);
+    // printf("GPU GP0 write: 0x%08X\n", value);
 }
 
 static inline void gpu_write_gp1(Gpu *gpu, uint32_t value) {
-    printf("GPU GP1 write: 0x%08X\n", value);
+    // printf("GPU GP1 write: 0x%08X\n", value);
 }
 
 static inline uint32_t gpu_read_gp0(Gpu *gpu) {
-    printf("GPU GP0 read\n");
+    // printf("GPU GP0 read\n");
     return 0;
 }
 
 static inline uint32_t gpu_read_gp1(Gpu *gpu) {
-    printf("GPU GP1 read\n");
+    // printf("GPU GP1 read\n");
     // return gpu->status;
     return 0x1c802000; // gpu ready
 }
