@@ -20,7 +20,7 @@ void irq_reset(Irq *irq) {
     irq->mask = 0;
 }
 
-uint16_t irq_read_status(PSX *psx) {
+uint16_t irq_read_stat(PSX *psx) {
     return psx->irq.stat;
 }
 

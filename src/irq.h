@@ -11,7 +11,7 @@ typedef struct Irq {
 
 void irq_reset(Irq *irq);
 
-uint16_t irq_read_status(PSX *psx);
+uint16_t irq_read_stat(PSX *psx);
 uint16_t irq_read_mask(PSX *psx);
 
 void irq_write_stat(PSX *psx, uint16_t value);

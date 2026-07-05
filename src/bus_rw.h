@@ -13,8 +13,8 @@
 
 static inline uint8_t io_read8(PSX *psx, uint32_t addr) {
     switch (addr) {
-        case 0x1f801000: return irq_read_status(psx);
-        case 0x1f801004: return irq_read_mask(psx);
+        case 0x1f801070: return irq_read_stat(psx);
+        case 0x1f801074: return irq_read_mask(psx);
         case 0x1f801810: return gpu_read_gp0(&psx->gpu);
         case 0x1f801814: return gpu_read_gp1(&psx->gpu);
     }
@@ -24,8 +24,8 @@ static inline uint8_t io_read8(PSX *psx, uint32_t addr) {
 
 static inline uint16_t io_read16(PSX *psx, uint32_t addr) {
     switch (addr) {
-        case 0x1f801000: return irq_read_status(psx);
-        case 0x1f801004: return irq_read_mask(psx);
+        case 0x1f801070: return irq_read_stat(psx);
+        case 0x1f801074: return irq_read_mask(psx);
         case 0x1f801810: return gpu_read_gp0(&psx->gpu);
         case 0x1f801814: return gpu_read_gp1(&psx->gpu);
     }
@@ -35,8 +35,8 @@ static inline uint16_t io_read16(PSX *psx, uint32_t addr) {
 
 static inline uint32_t io_read32(PSX *psx, uint32_t addr) {
     switch (addr) {
-        case 0x1f801000: return irq_read_status(psx);
-        case 0x1f801004: return irq_read_mask(psx);
+        case 0x1f801070: return irq_read_stat(psx);
+        case 0x1f801074: return irq_read_mask(psx);
         case 0x1f801810: return gpu_read_gp0(&psx->gpu);
         case 0x1f801814: return gpu_read_gp1(&psx->gpu);
     }
@@ -49,11 +49,17 @@ static inline void io_write8(PSX *psx, uint32_t addr, uint8_t value) {
 }
 
 static inline void io_write16(PSX *psx, uint32_t addr, uint16_t value) {
+    switch (addr) {
+        case 0x1f801070: irq_write_stat(psx, value); break;
+        case 0x1f801074: irq_write_mask(psx, value); break;
+    }
     printf("I/O write (16) to unimplemented address: 0x%08X, value: 0x%04X\n", addr, value);
 }
 
 static inline void io_write32(PSX *psx, uint32_t addr, uint32_t value) {
     switch (addr) {
+        case 0x1f801070: irq_write_stat(psx, value); break;
+        case 0x1f801074: irq_write_mask(psx, value); break;
         case 0x1f801810: gpu_write_gp0(&psx->gpu, value); break;
         case 0x1f801814: gpu_write_gp1(&psx->gpu, value); break;
         default:
