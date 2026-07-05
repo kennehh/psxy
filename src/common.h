@@ -47,6 +47,8 @@ typedef struct Cpu Cpu;
 typedef struct Cop0 Cop0;
 typedef struct Bus Bus;
 typedef struct TTY TTY;
+typedef struct Gpu Gpu;
+typedef struct Irq Irq;
 
 // Shared utility functions
 

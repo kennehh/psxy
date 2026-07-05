@@ -14,6 +14,8 @@ add_executable(psxy
     src/exceptions.c
     src/tty.c
     src/loader.c
+    src/gpu.c
+    src/irq.c
 )
 
 target_include_directories(psxy PRIVATE src)

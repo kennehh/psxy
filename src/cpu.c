@@ -715,7 +715,7 @@ static inline void execute_instruction(PSX *psx) {
     }
 }
 
-static inline void cpu_begin_step(Cpu *cpu) {
+static inline void begin_step(Cpu *cpu) {
     cpu->next_branch_state = BRANCH_STATE_NO_DELAY;
     cpu->next_load_reg = 0;
 
@@ -727,15 +727,25 @@ static inline void cpu_begin_step(Cpu *cpu) {
 #endif
 }
 
-static inline void cpu_execute(PSX *psx) {
-    execute_instruction(psx);
+static inline void interrupts_pending(Cpu *cpu) {
+    uint32_t status = cpu->cop0.status;
+    uint32_t cause = cpu->cop0.cause;
+    if (status & 0x1) { // Check if interrupts are enabled
+        return;
+    }
+
+    uint32_t pending = cause & status & 0xFF00; // Check for pending interrupts
+    if (pending) {
+        cpu->next_exc_code = EXC_INT; // Set exception code for interrupt
+    }
 }
 
-static inline void cpu_finish_step(Cpu *cpu) {
+static inline void finish_step(PSX *psx) {
+    Cpu *cpu = &psx->cpu;
     commit_load(cpu); // Commit any scheduled load after executing the instruction
 
     if (unlikely(cpu->next_exc_code != EXC_NONE)) {
-        raise_exception(cpu, cpu->next_exc_code);
+        raise_exception(psx, cpu->next_exc_code);
         return;
     }
 
@@ -751,22 +761,24 @@ static inline void cpu_finish_step(Cpu *cpu) {
         cpu->branch_target = cpu->next_branch_target;
     }
 #endif
+
+    interrupts_pending(cpu); // Check for any pending interrupts after instruction execution
 }
 
 uint32_t cpu_step(PSX *psx) {
     Cpu *cpu = &psx->cpu;
 
-    cpu_begin_step(cpu);
+    begin_step(cpu);
 
     if (unlikely(cpu->pc & 3)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
-        cpu_finish_step(cpu);
+        finish_step(psx);
         return cpu->pc;
     }
 
     cpu->inst = fetch_instruction(psx, &cpu->fetch_page, &cpu->fetch_page_ptr);
-    cpu_execute(psx);
-    cpu_finish_step(cpu);
+    execute_instruction(psx);
+    finish_step(psx);
     return cpu->pc;
 }
 
@@ -797,7 +809,7 @@ label_fetch:
     }
 
     // tty_maybe_putchar(&psx->tty, cpu);
-    cpu_begin_step(cpu);
+    begin_step(cpu);
 
     if (unlikely(cpu->pc & 3)) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
@@ -835,7 +847,7 @@ label_invalid:
     goto label_finish;
 
 label_finish:
-    cpu_finish_step(cpu);
+    finish_step(psx);
     goto label_fetch;
 }
 
@@ -849,4 +861,5 @@ void cpu_reset(Cpu *cpu) {
     cpu->next_exc_code = EXC_NONE;
     cpu->fetch_page = BUS_PAGE_COUNT; // Invalidate fetch page
     cpu->fetch_page_ptr = NULL;
+    cpu->cop0.prid = 2;
 }

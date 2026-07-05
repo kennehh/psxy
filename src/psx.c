@@ -13,6 +13,7 @@ PSX *psx_create(void) {
     }
     bus_init(&psx->bus);
     cpu_reset(&psx->cpu);
+    gpu_init(&psx->gpu);
     tty_init(&psx->tty);
     load_bios_trampolines(psx);
     return psx;
@@ -20,6 +21,8 @@ PSX *psx_create(void) {
 
 void psx_destroy(PSX *psx) {
     if (!psx) return;
+    bus_destroy(&psx->bus);
+    gpu_destroy(&psx->gpu);
     free(psx);
 }
 
@@ -28,6 +31,8 @@ void psx_reset(PSX *psx) {
     cpu_reset(&psx->cpu);
     bus_reset(&psx->bus);
     tty_reset(&psx->tty);
+    gpu_reset(&psx->gpu);
+    irq_reset(&psx->irq);
     load_bios_trampolines(psx);
 }
 

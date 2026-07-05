@@ -5,6 +5,8 @@ add_library(psxy_test
     ../src/cpu.c
     ../src/tty.c
     ../src/exceptions.c
+    ../src/gpu.c
+    ../src/irq.c
 )
 target_include_directories(psxy_test PUBLIC ../src)
 
@@ -22,6 +24,8 @@ add_executable(test_single_step
     ../src/cpu.c
     ../src/tty.c
     ../src/exceptions.c
+    ../src/gpu.c
+    ../src/irq.c
 )
 target_link_libraries(test_single_step PRIVATE json-c)
 target_include_directories(test_single_step PRIVATE ../src .)

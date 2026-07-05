@@ -5,11 +5,14 @@
 #include "bus.h"
 #include "cpu.h"
 #include "tty.h"
-
+#include "gpu.h"
+#include "irq.h"
 typedef struct PSX {
     Cpu cpu;
     Bus bus;
+    Gpu gpu;
     TTY tty;
+    Irq irq;
 } PSX;
 
 PSX *psx_create(void);
