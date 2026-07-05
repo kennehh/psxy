@@ -140,7 +140,6 @@ void set_cycles(Cycle *cycle_array, struct json_object *json_cycles) {
 
     // cycles is stored in the JSON as an array of objects
     if (json_cycles && json_object_get_type(json_cycles) == json_type_array) {
-        printf("Setting up %d cycles\n", json_object_array_length(json_cycles));
         cycle_count = json_object_array_length(json_cycles);
         cycles = malloc(sizeof(Cycle) * cycle_count);
 
