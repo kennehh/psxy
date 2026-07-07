@@ -40,7 +40,6 @@
 #define BIOS_PHYS_START 0x1FC00000
 #define BIOS_PHYS_END   (BIOS_PHYS_START + BIOS_SIZE - 1)
 
-
 #define IO_GPU_START 0x1F801810
 #define IO_GPU_END   0x1F80181F
 
@@ -50,6 +49,13 @@
 #define IO_TIMERS_START 0x1F801100
 #define IO_TIMERS_END   0x1F80112F
 
+#define IO_MEMCTRL_1_START 0x1F801000
+#define IO_MEMCTRL_1_END   0x1F80101F
+
+#define IO_MEMCTRL_2_START 0x1F801060
+#define IO_MEMCTRL_2_END   0x1F80106F
+
+#define IO_MEMCTRL_3_START 0xFFFE0000
 
 #define CASE_REG32_8(base) \
     case (base): case (base + 1): case (base + 2): case (base + 3)

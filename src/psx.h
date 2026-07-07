@@ -9,6 +9,7 @@
 #include "irq.h"
 #include "cop0.h"
 #include "timers.h"
+#include "memctrl.h"
 
 typedef struct PSX {
     Cpu cpu;
@@ -18,6 +19,7 @@ typedef struct PSX {
     TTY tty;
     Irq irq;
     Timers timers;
+    MemCtrl memctrl;
 } PSX;
 
 PSX *psx_create(void);

@@ -41,6 +41,7 @@ void psx_reset(PSX *psx) {
     gpu_reset(&psx->gpu);
     irq_reset(&psx->irq);
     timers_reset(&psx->timers);
+    memctrl_reset(&psx->memctrl);
 
 #ifndef PSXY_SINGLE_STEP_TEST_MODE
     load_bios_trampolines(psx);

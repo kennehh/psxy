@@ -74,12 +74,12 @@ void load_exe(PSX *psx, const char *exe_path) {
     psx->cpu.r[29] = sp_base + sp_offset; // sp register
 
     if (memfill_size > 0) {
-        uint32_t start_phys = memfill_start & 0x1FFFFFFF;
+        uint32_t start_phys = physical_address(memfill_start);
         memset(psx->bus.ram + start_phys, 0, memfill_size);
     }
 
     if (size > 0) {
-        uint32_t dest_phys = dest & 0x1FFFFFFF;
+        uint32_t dest_phys = physical_address(dest);
         fseek(exe_file, 0x800, SEEK_SET); // Skip to the data section of the EXE
         fread(psx->bus.ram + dest_phys, 1, size, exe_file);
     }

@@ -57,8 +57,7 @@ static inline uint16_t bus_read16(PSX *psx, Bus* bus, uint32_t addr) {
 }
 
 static inline uint32_t bus_read32_internal(PSX *psx, Bus* bus, uint32_t addr) {
-    addr = physical_address(addr);
-    uint32_t page = addr >> BUS_PAGE_SHIFT;
+    uint32_t page = get_page_index(addr);
     uint8_t *page_ptr = bus->read_pages[page];
 
     if (unlikely(page_ptr == NULL)) {
@@ -101,7 +100,6 @@ static inline void bus_write16(PSX *psx, Bus* bus, uint32_t addr, uint16_t value
     }
     uint32_t offset = addr & BUS_PAGE_MASK;
     memcpy(page_ptr + offset, &value, sizeof(uint16_t));
-
 }
 
 static inline void bus_write32(PSX *psx, Bus* bus, uint32_t addr, uint32_t value) {

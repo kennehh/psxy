@@ -16,6 +16,7 @@ add_executable(test_single_step
     ${PROJECT_SOURCE_DIR}/src/gpu.c
     ${PROJECT_SOURCE_DIR}/src/irq.c
     ${PROJECT_SOURCE_DIR}/src/timers.c
+    ${PROJECT_SOURCE_DIR}/src/memctrl.c
     test_single_step.c
 )
 target_compile_definitions(test_single_step PRIVATE PSXY_SINGLE_STEP_TEST_MODE)

@@ -24,6 +24,7 @@ add_library(psxy_core
     src/gpu.c
     src/irq.c
     src/timers.c
+    src/memctrl.c
 )
 
 target_include_directories(psxy_core PRIVATE src)
