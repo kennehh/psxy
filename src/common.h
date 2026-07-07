@@ -50,12 +50,18 @@
 #define IO_TIMERS_END   0x1F80112F
 
 #define IO_MEMCTRL_1_START 0x1F801000
-#define IO_MEMCTRL_1_END   0x1F80101F
+#define IO_MEMCTRL_1_END   0x1F80102F
 
 #define IO_MEMCTRL_2_START 0x1F801060
 #define IO_MEMCTRL_2_END   0x1F80106F
 
+#define IO_SPU_START 0x1F801C00
+#define IO_SPU_END   0x1F801DFF
+
 #define IO_MEMCTRL_3_START 0xFFFE0000
+
+#define IO_EXP2_START 0x1F802000
+#define IO_EXP2_END   0x1F8020FF
 
 #define CASE_REG32_8(base) \
     case (base): case (base + 1): case (base + 2): case (base + 3)
@@ -157,6 +163,7 @@ typedef struct TTY TTY;
 typedef struct Gpu Gpu;
 typedef struct Irq Irq;
 typedef struct Timers Timers;
+typedef struct MemCtrl MemCtrl;
 
 // Shared utility functions
 

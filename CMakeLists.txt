@@ -25,6 +25,8 @@ add_library(psxy_core
     src/irq.c
     src/timers.c
     src/memctrl.c
+    src/spu.c
+    src/exp2.c
 )
 
 target_include_directories(psxy_core PRIVATE src)

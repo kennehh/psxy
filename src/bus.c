@@ -7,6 +7,8 @@
 #include "irq.h"
 #include "timers.h"
 #include "memctrl.h"
+#include "spu.h"
+#include "exp2.h"
 
 static void map_buffer(Bus *bus, uint8_t *buffer, size_t size, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
@@ -91,6 +93,12 @@ uint##size##_t io_read##size(PSX *psx, uint32_t addr) { \
     if (addr >= IO_MEMCTRL_2_START && addr <= IO_MEMCTRL_2_END) { \
         return memctrl_read##size(psx, addr); \
     } \
+    if (addr >= IO_SPU_START && addr <= IO_SPU_END) { \
+        return spu_read##size(psx, addr); \
+    } \
+    if (addr >= IO_EXP2_START && addr <= IO_EXP2_END) { \
+        return exp2_read##size(psx, addr); \
+    } \
     printf("I/O read (%d) from unimplemented address: 0x%08X\n", size, addr); \
     return 0; \
 }
@@ -120,6 +128,14 @@ void io_write##size(PSX *psx, uint32_t addr, uint##size##_t value) { \
     } \
     if (addr >= IO_MEMCTRL_2_START && addr <= IO_MEMCTRL_2_END) { \
         memctrl_write##size(psx, addr, value); \
+        return; \
+    } \
+    if (addr >= IO_SPU_START && addr <= IO_SPU_END) { \
+        spu_write##size(psx, addr, value); \
+        return; \
+    } \
+    if (addr >= IO_EXP2_START && addr <= IO_EXP2_END) { \
+        exp2_write##size(psx, addr, value); \
         return; \
     } \
     printf("I/O write (%d) to unimplemented address: 0x%08X, value: 0x%0*X\n", size, addr, size / 8 * 2, value); \
