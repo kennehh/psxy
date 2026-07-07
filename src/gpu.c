@@ -40,7 +40,8 @@ static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
 
 static inline uint32_t gpu_gp1_read32(Gpu *gpu) {
     // Implement GP1 read logic here
-    return gpu->status; // Return status for GP1 reads
+    // return gpu->status; // Return status for GP1 reads
+    return 0x1c802000;
 }
 
 static inline void gpu_gp0_write32(Gpu *gpu, uint32_t value) {

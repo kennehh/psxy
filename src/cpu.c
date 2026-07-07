@@ -6,7 +6,7 @@
 #include "cop0.h"
 #include "cpu.h"
 #include "tty.h"
-#include "bus_rw.h"
+#include "bus.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)
@@ -383,7 +383,7 @@ static inline void execute_lb(PSX *psx) {
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
-    int32_t value = (int32_t)(int8_t)bus_read8(psx, addr);
+    int32_t value = (int32_t)(int8_t)bus_read8(psx, &psx->bus, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
@@ -392,7 +392,7 @@ static inline void execute_lbu(PSX *psx) {
     uint32_t base = reg_read(cpu, RS(cpu));
     int16_t offset = SIMM(cpu);
     uint32_t addr = base + offset;
-    uint32_t value = bus_read8(psx, addr);
+    uint32_t value = bus_read8(psx, &psx->bus, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
@@ -405,7 +405,7 @@ static inline void execute_lh(PSX *psx) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    int32_t value = (int32_t)(int16_t)bus_read16(psx, addr);
+    int32_t value = (int32_t)(int16_t)bus_read16(psx, &psx->bus, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
@@ -416,7 +416,7 @@ static inline void execute_lhu(PSX *psx) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    uint32_t value = bus_read16(psx, addr);
+    uint32_t value = bus_read16(psx, &psx->bus, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
@@ -427,7 +427,7 @@ static inline void execute_lw(PSX *psx) {
         cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
         return;
     }
-    uint32_t value = bus_read32(psx, addr);
+    uint32_t value = bus_read32(psx, &psx->bus, addr);
     schedule_load(cpu, RT(cpu), value);
 }
 
@@ -440,25 +440,25 @@ static inline void execute_lwl(PSX *psx) {
     switch (addr & 3) {
         case 0: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value = bus_read8(psx, aligned_addr);
+            uint8_t mem_value = bus_read8(psx, &psx->bus, aligned_addr);
             result = (reg_value & 0x00FFFFFF) | (mem_value << 24);
             break;
         }
         case 1: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value = bus_read16(psx, aligned_addr);
+            uint16_t mem_value = bus_read16(psx, &psx->bus, aligned_addr);
             result = (reg_value & 0x0000FFFF) | (mem_value << 16);
             break;
         }
         case 2: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value_16 = bus_read16(psx, aligned_addr);
-            uint8_t mem_value_8 = bus_read8(psx, addr);
+            uint16_t mem_value_16 = bus_read16(psx, &psx->bus, aligned_addr);
+            uint8_t mem_value_8 = bus_read8(psx, &psx->bus, addr);
             result = (reg_value & 0x000000FF) | (mem_value_16 << 8) | (mem_value_8 << 24);
             break;
         }
         case 3: {
-            result = bus_read32(psx, aligned_addr);
+            result = bus_read32(psx, &psx->bus, aligned_addr);
             break;
         }
         default:
@@ -476,24 +476,24 @@ static inline void execute_lwr(PSX *psx) {
 
     switch (addr & 3) {
         case 0:
-            result = bus_read32(psx, addr);
+            result = bus_read32(psx, &psx->bus, addr);
             break;
         case 1: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value_8 = bus_read8(psx, addr);
-            uint16_t mem_value_16 = bus_read16(psx, addr + 1);
+            uint8_t mem_value_8 = bus_read8(psx, &psx->bus, addr);
+            uint16_t mem_value_16 = bus_read16(psx, &psx->bus, addr + 1);
             result = (reg_value & 0xFF000000) | (mem_value_16 << 8) | mem_value_8;
             break;
         }
         case 2: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint16_t mem_value_16 = bus_read16(psx, addr);
+            uint16_t mem_value_16 = bus_read16(psx, &psx->bus, addr);
             result = (reg_value & 0xFFFF0000) | mem_value_16;
             break;
         }
         case 3: {
             uint32_t reg_value = reg_read_with_load(cpu, RT(cpu));
-            uint8_t mem_value_8 = bus_read8(psx, addr);
+            uint8_t mem_value_8 = bus_read8(psx, &psx->bus, addr);
             result = (reg_value & 0xFFFFFF00) | mem_value_8;
             break;
         }
@@ -513,7 +513,7 @@ static inline void execute_sb(PSX *psx) {
     Cpu *cpu = &psx->cpu;
     uint32_t addr = get_addr_from_imm(cpu);
     uint8_t value = (uint8_t)reg_read(cpu, RT(cpu));
-    bus_write8(psx, addr, value);
+    bus_write8(psx, &psx->bus, addr, value);
 }
 
 static inline void execute_sh(PSX *psx) {
@@ -529,7 +529,7 @@ static inline void execute_sh(PSX *psx) {
     }
 
     uint16_t value = (uint16_t)reg_read(cpu, RT(cpu));
-    bus_write16(psx, addr, value);
+    bus_write16(psx, &psx->bus, addr, value);
 }
 
 static inline void execute_sw(PSX *psx) {
@@ -545,7 +545,7 @@ static inline void execute_sw(PSX *psx) {
     }
 
     uint32_t value = reg_read(cpu, RT(cpu));
-    bus_write32(psx, addr, value);
+    bus_write32(psx, &psx->bus, addr, value);
 }
 
 static inline void execute_swl(PSX *psx) {
@@ -560,17 +560,17 @@ static inline void execute_swl(PSX *psx) {
 
     switch (addr & 3) {
         case 0:
-            bus_write8(psx, aligned_addr, value >> 24);
+            bus_write8(psx, &psx->bus, aligned_addr, value >> 24);
             break;
         case 1:
-            bus_write16(psx, aligned_addr, value >> 16);
+            bus_write16(psx, &psx->bus, aligned_addr, value >> 16);
             break;
         case 2:
-            bus_write16(psx, aligned_addr, value >> 8);
-            bus_write8(psx, addr, (value >> 24) & 0xFF);
+            bus_write16(psx, &psx->bus, aligned_addr, value >> 8);
+            bus_write8(psx, &psx->bus, addr, (value >> 24) & 0xFF);
             break;
         case 3:
-            bus_write32(psx, aligned_addr, value);
+            bus_write32(psx, &psx->bus, aligned_addr, value);
             break;
     }
 }
@@ -586,17 +586,17 @@ static inline void execute_swr(PSX *psx) {
 
     switch (addr & 3) {
         case 0:
-            bus_write32(psx, addr, value);
+            bus_write32(psx, &psx->bus, addr, value);
             break;
         case 1:
-            bus_write8(psx, addr, value);
-            bus_write16(psx, addr + 1, value >> 8);
+            bus_write8(psx, &psx->bus, addr, value);
+            bus_write16(psx, &psx->bus, addr + 1, value >> 8);
             break;
         case 2:
-            bus_write16(psx, addr, value);
+            bus_write16(psx, &psx->bus, addr, value);
             break;
         case 3:
-            bus_write8(psx, addr, value);
+            bus_write8(psx, &psx->bus, addr, value);
             break;
         default:
             // This case should never happen
@@ -648,7 +648,7 @@ static inline void execute_bcond(PSX *psx) {
 
 static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t **fetch_page_ptr) {
     #ifdef PSXY_SINGLE_STEP_TEST_MODE
-    return bus_fetch32(psx, psx->cpu.pc);
+    return bus_fetch32(psx, &psx->bus, psx->cpu.pc);
     #endif
 
     uint32_t pc = psx->cpu.pc;
@@ -661,7 +661,7 @@ static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t
 
     if (unlikely(*fetch_page_ptr == NULL)) {
         // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
-        return bus_fetch32(psx, pc);
+        return bus_fetch32(psx, &psx->bus, pc);
     }
 
     uint32_t inst;

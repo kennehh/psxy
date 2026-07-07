@@ -54,25 +54,25 @@ static inline void consume_write_cycle(uint8_t action, uint8_t size, uint32_t ad
     cycle_index++;
 }
 
-static inline uint8_t bus_read8(PSX *psx, uint32_t addr) {
+static inline uint8_t bus_read8(PSX *psx, Bus *bus, uint32_t addr) {
     return consume_read_cycle(ACTION_READ, 1, addr);
 }
-static inline uint16_t bus_read16(PSX *psx, uint32_t addr) {
+static inline uint16_t bus_read16(PSX *psx, Bus *bus, uint32_t addr) {
     return consume_read_cycle(ACTION_READ, 2, addr);
 }
-static inline uint32_t bus_read32(PSX *psx, uint32_t addr) {
+static inline uint32_t bus_read32(PSX *psx, Bus *bus, uint32_t addr) {
     return consume_read_cycle(ACTION_READ, 4, addr);
 }
-static inline uint32_t bus_fetch32(PSX *psx, uint32_t addr) {
+static inline uint32_t bus_fetch32(PSX *psx, Bus *bus, uint32_t addr) {
     return consume_read_cycle(ACTION_FETCH, 4, addr);
 }
-static inline void bus_write8(PSX *psx, uint32_t addr, uint8_t value) {
+static inline void bus_write8(PSX *psx, Bus *bus, uint32_t addr, uint8_t value) {
     consume_write_cycle(ACTION_WRITE, 1, addr, value);
 }
-static inline void bus_write16(PSX *psx, uint32_t addr, uint16_t value) {
+static inline void bus_write16(PSX *psx, Bus *bus, uint32_t addr, uint16_t value) {
     consume_write_cycle(ACTION_WRITE, 2, addr, value);
 }
-static inline void bus_write32(PSX *psx, uint32_t addr, uint32_t value) {
+static inline void bus_write32(PSX *psx, Bus *bus, uint32_t addr, uint32_t value) {
     consume_write_cycle(ACTION_WRITE, 4, addr, value);
 }
 #endif // SINGLE_STEP_BUS_H

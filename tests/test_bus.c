@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "psx.h"
-#include "bus_rw.h"
+#include "bus.h"
 
 #define KSEG0_VIRT_START 0x80000000
 #define KSEG1_VIRT_START 0xA0000000
@@ -10,48 +10,48 @@ int test_read(PSX *psx, uint32_t addr, uint32_t value) {
     int result = 0;
     uint32_t orig_addr = addr;
 
-    uint32_t read_value_32 = bus_read32(psx, addr);
+    uint32_t read_value_32 = bus_read32(psx, &psx->bus, addr);
     if (read_value_32 != value) {
         fprintf(stderr, "bus_read32 failed at address 0x%08X: expected 0x%08X, got 0x%08X\n", addr, value, read_value_32);
         result = 1;
     }
 
-    uint16_t read_value_16 = bus_read16(psx, addr);
+    uint16_t read_value_16 = bus_read16(psx, &psx->bus, addr);
     if (read_value_16 != (uint16_t)(value & 0xFFFF)) {
         fprintf(stderr, "bus_read16 failed at address 0x%08X: expected 0x%04X, got 0x%04X\n", addr, (uint16_t)(value & 0xFFFF), read_value_16);
         result = 1;
     }
 
     addr += 2; // Move to the next 16-bit boundary
-    read_value_16 = bus_read16(psx, addr);
+    read_value_16 = bus_read16(psx, &psx->bus, addr);
     if (read_value_16 != (uint16_t)((value >> 16) & 0xFFFF)) {
         fprintf(stderr, "bus_read16 failed at address 0x%08X: expected 0x%04X, got 0x%04X\n", addr, (uint16_t)((value >> 16) & 0xFFFF), read_value_16);
         result = 1;
     }
 
     addr = orig_addr; // Reset to original address
-    uint8_t read_value_8 = bus_read8(psx, addr);
+    uint8_t read_value_8 = bus_read8(psx, &psx->bus, addr);
     if (read_value_8 != (uint8_t)(value & 0xFF)) {
         fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)(value & 0xFF), read_value_8);
         result = 1;
     }
 
     addr += 1; // Move to the next 8-bit boundary
-    read_value_8 = bus_read8(psx, addr);
+    read_value_8 = bus_read8(psx, &psx->bus, addr);
     if (read_value_8 != (uint8_t)((value >> 8) & 0xFF)) {
         fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 8) & 0xFF), read_value_8);
         result = 1;
     }
 
     addr += 1; // Move to the next 8-bit boundary
-    read_value_8 = bus_read8(psx, addr);
+    read_value_8 = bus_read8(psx, &psx->bus, addr);
     if (read_value_8 != (uint8_t)((value >> 16) & 0xFF)) {
         fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 16) & 0xFF), read_value_8);
         result = 1;
     }
 
     addr += 1; // Move to the next 8-bit boundary
-    read_value_8 = bus_read8(psx, addr);
+    read_value_8 = bus_read8(psx, &psx->bus, addr);
     if (read_value_8 != (uint8_t)((value >> 24) & 0xFF)) {
         fprintf(stderr, "bus_read8 failed at address 0x%08X: expected 0x%02X, got 0x%02X\n", addr, (uint8_t)((value >> 24) & 0xFF), read_value_8);
         result = 1;
@@ -92,9 +92,9 @@ int test_ram(PSX *psx) {
     uint32_t addr3 = 0x00002000;
     uint32_t value3 = 0xDEADBEEF;
 
-    bus_write32(psx, addr1, value1);
-    bus_write32(psx, addr2, value2);
-    bus_write32(psx, addr3, value3);
+    bus_write32(psx, &psx->bus, addr1, value1);
+    bus_write32(psx, &psx->bus, addr2, value2);
+    bus_write32(psx, &psx->bus, addr3, value3);
 
     result |= test_read_all_segments(psx, addr1, value1);
     result |= test_read_all_segments(psx, addr2, value2);
@@ -110,8 +110,8 @@ int test_exp1(PSX *psx) {
     uint32_t addr2 = 0x1F000100;
     uint32_t value2 = 0xFEEDFACE;
 
-    bus_write32(psx, addr1, value1);
-    bus_write32(psx, addr2, value2);
+    bus_write32(psx, &psx->bus, addr1, value1);
+    bus_write32(psx, &psx->bus, addr2, value2);
 
     int result = 0;
     result |= test_read_all_segments(psx, addr1, value1);
@@ -127,8 +127,8 @@ int test_scratchpad(PSX *psx) {
     uint32_t addr2 = 0x1F800100;
     uint32_t value2 = 0xBAADF00D;
 
-    bus_write32(psx, addr1, value1);
-    bus_write32(psx, addr2, value2);
+    bus_write32(psx, &psx->bus, addr1, value1);
+    bus_write32(psx, &psx->bus, addr2, value2);
 
     int result = 0;
     result |= test_read_all_segments(psx, addr1, value1);
@@ -144,8 +144,8 @@ int test_bios(PSX *psx) {
     uint32_t addr2 = 0x1FC00010;
     uint32_t value2 = 0xCAFEBABE;
 
-    bus_write32(psx, addr1, value1);
-    bus_write32(psx, addr2, value2);
+    bus_write32(psx, &psx->bus, addr1, value1);
+    bus_write32(psx, &psx->bus, addr2, value2);
 
     int result = 0;
     result |= test_read_all_segments(psx, addr1, 0);

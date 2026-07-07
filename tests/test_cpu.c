@@ -1,6 +1,6 @@
 #include "cpu.h"
 #include "psx.h"
-#include "bus_rw.h"
+#include "bus.h"
 #include <stdio.h>
 
 #define ITYPE(opcode, rs, rt, imm) (((opcode & 0x3F) << 26) | ((rs & 0x1F) << 21) | ((rt & 0x1F) << 16) | (imm & 0xFFFF))
@@ -16,12 +16,12 @@ int main() {
     psx->cpu.r[1] = 0x00002000; // base address for LW
     psx->cpu.r[2] = 0xDEADBEEF; // old value
 
-    bus_write32(psx, 0x00002000, 0xCAFEBABE); // write value to memory
+    bus_write32(psx, &psx->bus, 0x00002000, 0xCAFEBABE); // write value to memory
 
     // Write the instructions
-    bus_write32(psx, 0x00000000, LW(1, 2, 0)); // schedules a load of 0xCAFEBABE into $2
-    bus_write32(psx, 0x00000004, ADDIU(2, 3, 1)); // ADDIU $3, $2, 1 (should use old value of $2)
-    bus_write32(psx, 0x00000008, ADDIU(2, 4, 1)); // ADDIU $4, $2, 1 (should use new value of $2)
+    bus_write32(psx, &psx->bus, 0x00000000, LW(1, 2, 0)); // schedules a load of 0xCAFEBABE into $2
+    bus_write32(psx, &psx->bus, 0x00000004, ADDIU(2, 3, 1)); // ADDIU $3, $2, 1 (should use old value of $2)
+    bus_write32(psx, &psx->bus, 0x00000008, ADDIU(2, 4, 1)); // ADDIU $4, $2, 1 (should use new value of $2)
 
     // Step through the instructions
     cpu_step(psx); // Execute LW

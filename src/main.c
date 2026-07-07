@@ -49,14 +49,14 @@ static void run_until_kernel_init(PSX *psx) {
 int main(void) {
     PSX* psx = psx_create();
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         psx_reset(psx);
         load_bios(psx, "roms/SCPH1001.BIN");
         run_until_kernel_init(psx);
-        // load_exe(psx, "roms/psxtest_cpu.exe");
+        load_exe(psx, "roms/psxtest_cpu.exe");
 
-        // printf("Benchmark iteration %d\n", i + 1);
-        // benchmark(psx);
+        printf("Benchmark iteration %d\n", i + 1);
+        benchmark(psx);
     }
 
     psx_destroy(psx);

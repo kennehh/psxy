@@ -4,7 +4,7 @@
 #include "tty.h"
 #include "cpu.h"
 #include "psx.h"
-#include "bus_rw.h"
+#include "bus.h"
 
 void tty_init(TTY *tty) {
     tty->buffer_index = 0;
@@ -28,7 +28,7 @@ static inline uint32_t get_arg_value(PSX *psx, uint8_t arg_idx) {
     // [SP+10h...]
     uint32_t sp = cpu->r[29];
     uint32_t arg_addr = sp + 0x10 + ((arg_idx - 4) << 2);
-    return bus_read32(psx, arg_addr);
+    return bus_read32(psx, &psx->bus, arg_addr);
 }
 
 static inline void tty_putchar(TTY *tty, char c) {
@@ -73,7 +73,7 @@ static inline char* arg_string(TTY *tty, PSX *psx, uint8_t arg_idx, size_t max_l
     static char buffer[TTY_BUFFER_SIZE];
 
     for (size_t i = 0; i < max_length; i++) {
-        char c = bus_read8(psx, str_addr + i);
+        char c = bus_read8(psx, &psx->bus, str_addr + i);
         buffer[i] = c;
         if (c == '\0') {
             break;
@@ -99,7 +99,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
     uint8_t buffer_idx = 0;
 
     for (int i = 0; i < max_msg_length; i++) {
-        char c = bus_read8(psx, addr + i);
+        char c = bus_read8(psx, &psx->bus, addr + i);
         if (c == '\0') {
             break;
         }
@@ -108,7 +108,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
             continue;
         }
 
-        char c_next = bus_read8(psx, addr + i + 1);
+        char c_next = bus_read8(psx, &psx->bus, addr + i + 1);
         if (c_next == '%') {
             buffer[buffer_idx++] = '%';
             i++;
@@ -116,7 +116,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
         }
 
         i++;
-        c = bus_read8(psx, addr + i);
+        c = bus_read8(psx, &psx->bus, addr + i);
 
         char pad_ch = ' ';
         bool left_align = false;
@@ -132,7 +132,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
         }
 
         while (i < max_msg_length) {
-            c = bus_read8(psx, addr + i);
+            c = bus_read8(psx, &psx->bus, addr + i);
             if (c < '0' || c > '9') {
                 break;
             }
@@ -144,7 +144,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
             i++;
             // Precision is ignored for now
             while (i < max_msg_length) {
-                c = bus_read8(psx, addr + i);
+                c = bus_read8(psx, &psx->bus, addr + i);
                 if (c < '0' || c > '9') {
                     break;
                 }

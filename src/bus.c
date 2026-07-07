@@ -3,7 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include "bus.h"
-#include "bus_rw.h"
+#include "gpu.h"
+#include "irq.h"
+#include "timers.h"
 
 static void map_buffer(Bus *bus, uint8_t *buffer, size_t size, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {
@@ -65,4 +67,94 @@ void bus_destroy(Bus *bus) {
     free(bus->ram);
     free(bus->exp1);
     free(bus->bios);
+}
+
+uint8_t io_read8(PSX *psx, uint32_t addr) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        return gpu_read8(psx, addr);
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        return irq_read8(psx, addr);
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        return timers_read8(psx, addr);
+    }
+    printf("I/O read (8) from unimplemented address: 0x%08X\n", addr);
+    return 0; // Placeholder for I/O read implementation
+}
+
+uint16_t io_read16(PSX *psx, uint32_t addr) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        return gpu_read16(psx, addr);
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        return irq_read16(psx, addr);
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        return timers_read16(psx, addr);
+    }
+    printf("I/O read (16) from unimplemented address: 0x%08X\n", addr);
+    return 0; // Placeholder for I/O read implementation
+}
+
+uint32_t io_read32(PSX *psx, uint32_t addr) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        return gpu_read32(psx, addr);
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        return irq_read32(psx, addr);
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        return timers_read32(psx, addr);
+    }
+    printf("I/O read (32) from unimplemented address: 0x%08X\n", addr);
+    return 0; // Placeholder for I/O read implementation
+}
+
+void io_write8(PSX *psx, uint32_t addr, uint8_t value) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        gpu_write8(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        irq_write8(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        timers_write8(psx, addr, value);
+        return;
+    }
+    printf("I/O write (8) to unimplemented address: 0x%08X, value: 0x%02X\n", addr, value);
+}
+
+void io_write16(PSX *psx, uint32_t addr, uint16_t value) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        gpu_write16(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        irq_write16(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        timers_write16(psx, addr, value);
+        return;
+    }
+    printf("I/O write (16) to unimplemented address: 0x%08X, value: 0x%04X\n", addr, value);
+}
+
+void io_write32(PSX *psx, uint32_t addr, uint32_t value) {
+    if (addr >= IO_GPU_START && addr <= IO_GPU_END) {
+        gpu_write32(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_IRQ_START && addr <= IO_IRQ_END) {
+        irq_write32(psx, addr, value);
+        return;
+    }
+    if (addr >= IO_TIMERS_START && addr <= IO_TIMERS_END) {
+        timers_write32(psx, addr, value);
+        return;
+    }
+    printf("I/O write (32) to unimplemented address: 0x%08X, value: 0x%08X\n", addr, value);
 }

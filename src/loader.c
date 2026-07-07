@@ -3,7 +3,7 @@
 #include <string.h>
 #include "psx.h"
 #include "loader.h"
-#include "bus_rw.h"
+#include "bus.h"
 
 void load_bios(PSX *psx, const char *bios_path) {
     FILE *bios_file = fopen(bios_path, "rb");
@@ -23,21 +23,21 @@ void load_bios(PSX *psx, const char *bios_path) {
 }
 
 void load_bios_trampolines(PSX *psx) {
-    bus_write32(psx, 0xA0, 0x03E00008); // jr $ra
-    bus_write32(psx, 0xA4, 0x00000000);
-    bus_write32(psx, 0xB0, 0x03E00008); // jr $ra
-    bus_write32(psx, 0xB4, 0x00000000);
-    bus_write32(psx, 0xC0, 0x03E00008); // jr $ra
-    bus_write32(psx, 0xC4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xA0, 0x03E00008); // jr $ra
+    bus_write32(psx, &psx->bus, 0xA4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xB0, 0x03E00008); // jr $ra
+    bus_write32(psx, &psx->bus, 0xB4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xC0, 0x03E00008); // jr $ra
+    bus_write32(psx, &psx->bus, 0xC4, 0x00000000);
 }
 
 void clear_bios_trampolines(PSX *psx) {
-    bus_write32(psx, 0xA0, 0x00000000);
-    bus_write32(psx, 0xA4, 0x00000000);
-    bus_write32(psx, 0xB0, 0x00000000);
-    bus_write32(psx, 0xB4, 0x00000000);
-    bus_write32(psx, 0xC0, 0x00000000);
-    bus_write32(psx, 0xC4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xA0, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xA4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xB0, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xB4, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xC0, 0x00000000);
+    bus_write32(psx, &psx->bus, 0xC4, 0x00000000);
 }
 
 void load_exe(PSX *psx, const char *exe_path) {
