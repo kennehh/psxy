@@ -20,49 +20,6 @@
 #define BUS_PAGE_COUNT  (MEMORY_SIZE / BUS_PAGE_SIZE) // 2^29 / 2^12 = 2^17 pages
 #define BUS_PAGE_MASK   (BUS_PAGE_SIZE - 1) // 0xFFF
 
-#define RAM_SIZE       1024 * 1024 * 2 // 2MB of RAM
-#define RAM_PHYS_START 0x00000000
-#define RAM_PHYS_END   (RAM_PHYS_START + RAM_SIZE - 1)
-
-#define EXP1_SIZE       0x800000 // 8MB of expansion 1 memory
-#define EXP1_PHYS_START 0x1F000000
-#define EXP1_PHYS_END   (EXP1_PHYS_START + EXP1_SIZE - 1)
-
-#define SCRATCHPAD_SIZE 1024 // 1KB of scratchpad memory
-#define SCRATCHPAD_PHYS_START 0x1F800000
-#define SCRATCHPAD_PHYS_END   0x1F800FFF
-
-#define IO_SIZE       0x2000 // 8KB of I/O memory
-#define IO_PHYS_START 0x1F801000
-#define IO_PHYS_END   (IO_PHYS_START + IO_SIZE - 1)
-
-#define BIOS_SIZE       0x80000 // 512KB of BIOS
-#define BIOS_PHYS_START 0x1FC00000
-#define BIOS_PHYS_END   (BIOS_PHYS_START + BIOS_SIZE - 1)
-
-#define IO_GPU_START 0x1F801810
-#define IO_GPU_END   0x1F80181F
-
-#define IO_IRQ_START 0x1F801070
-#define IO_IRQ_END   0x1F80107F
-
-#define IO_TIMERS_START 0x1F801100
-#define IO_TIMERS_END   0x1F80112F
-
-#define IO_MEMCTRL_1_START 0x1F801000
-#define IO_MEMCTRL_1_END   0x1F80102F
-
-#define IO_MEMCTRL_2_START 0x1F801060
-#define IO_MEMCTRL_2_END   0x1F80106F
-
-#define IO_SPU_START 0x1F801C00
-#define IO_SPU_END   0x1F801DFF
-
-#define IO_MEMCTRL_3_START 0xFFFE0000
-
-#define IO_EXP2_START 0x1F802000
-#define IO_EXP2_END   0x1F8020FF
-
 #define CASE_REG32_8(base) \
     case (base): case (base + 1): case (base + 2): case (base + 3)
 
