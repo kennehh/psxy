@@ -670,33 +670,6 @@ static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t
     return inst;
 }
 
-static inline void execute_instruction(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-    if (cpu->inst == 0) {
-        return;
-    }
-
-    uint8_t opcode = OPCODE(cpu);
-    switch (opcode) {
-        case 0x00: // SPECIAL
-            switch (FUNCT(cpu)) {
-                #define X(funct, name) case funct: execute_##name(psx); break;
-                FUNCT_TABLE
-                #undef X
-                default:
-                    cpu->next_exc_code = EXC_RI; // Reserved instruction exception
-                    break;
-            }
-            break;
-        #define X(opcode, name) case opcode: execute_##name(psx); break;
-        OPCODE_TABLE
-        #undef X
-        default:
-            cpu->next_exc_code = EXC_RI; // Reserved instruction exception
-            break;
-    }
-}
-
 static inline void begin_step(Cpu *cpu) {
     cpu->next_branch_state = BRANCH_STATE_NO_DELAY;
     cpu->next_load_reg = 0;
@@ -742,20 +715,7 @@ static inline void finish_step(PSX *psx) {
 }
 
 uint32_t cpu_step(PSX *psx) {
-    Cpu *cpu = &psx->cpu;
-
-    begin_step(cpu);
-
-    if (unlikely(cpu->pc & 3)) {
-        cpu->next_exc_code = EXC_ADEL; // Address error load/fetch
-        finish_step(psx);
-        return cpu->pc;
-    }
-
-    cpu->inst = fetch_instruction(psx, &cpu->fetch_page, &cpu->fetch_page_ptr);
-    execute_instruction(psx);
-    finish_step(psx);
-    return cpu->pc;
+    return cpu_run(psx, 1);
 }
 
 uint32_t cpu_run(PSX *psx, uint32_t cycles) {
