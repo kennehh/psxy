@@ -13,24 +13,10 @@
 #define GPU_STATUS_DISPLAY_DISABLED_BIT (1 << 23)
 #define GPU_STATUS_INTERRUPT_BIT (1 << 24)
 
+#define GPU_STATUS_DMA_DIRECTION_SHIFT 29
+#define GPU_STATUS_DMA_DIRECTION_MASK (3 << GPU_STATUS_DMA_DIRECTION_SHIFT)
+
 #define GPU_STATUS_DISPLAY_MODE_MASK (GPU_STATUS_REVERSE_BIT | GPU_STATUS_H_RES_368_BIT | GPU_STATUS_H_RES_BIT | GPU_STATUS_V_RES_BIT | GPU_STATUS_VIDEO_MODE_BIT | GPU_STATUS_COLOR_DEPTH_BIT | GPU_STATUS_INTERLACED_BIT | GPU_STATUS_DISPLAY_DISABLED_BIT)
-
-void gpu_init(Gpu *gpu) {
-    gpu->vram = (uint16_t *)malloc(1024 * 512 * sizeof(uint16_t));
-    gpu_reset(gpu);
-}
-
-void gpu_reset(Gpu *gpu) {
-    if (!gpu) return;
-    memset(gpu->vram, 0, 1024 * 512 * sizeof(uint16_t));
-}
-
-void gpu_destroy(Gpu *gpu) {
-    if (gpu->vram) {
-        free(gpu->vram);
-        gpu->vram = NULL;
-    }
-}
 
 static inline void gpu_update_display_size(Gpu *gpu) {
     gpu->output_w = gpu->display.h_end - gpu->display.h_start;
@@ -38,23 +24,24 @@ static inline void gpu_update_display_size(Gpu *gpu) {
 }
 
 static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
-    // Implement GP0 read logic here
-    return 0; // Placeholder
+    return gpu->gpu_read;
 }
 
 static inline uint32_t gpu_gp1_read32(Gpu *gpu) {
-    // Implement GP1 read logic here
-    // return gpu->status; // Return status for GP1 reads
-    return 0x1c802000;
+    return gpu->gpu_stat;
 }
 
 static inline void gp0_write(Gpu *gpu, uint32_t value) {
-    // Implement GP0 write logic here
+
 }
 
 static inline void gp1_clear_fifo(Gpu *gpu) {
     gpu->gp0_count = 0;
     gpu->gp0_expected = 0;
+}
+
+static inline void gp1_stat_reset(Gpu *gpu) {
+    gpu->gpu_stat = 0x14802000; // Reset to default status
 }
 
 static inline void gp1_ack_irq(Gpu *gpu) {
@@ -76,6 +63,7 @@ static inline void gp1_toggle_display(Gpu *gpu, uint32_t param) {
 static inline void gp1_dma_direction(Gpu *gpu, uint32_t param) {
     uint8_t direction = param & 0x03;
     gpu->dma_direction = direction;
+    gpu->gpu_stat = (gpu->gpu_stat & ~GPU_STATUS_DMA_DIRECTION_MASK) | (direction << GPU_STATUS_DMA_DIRECTION_SHIFT);
 }
 
 static inline void gp1_display_start(Gpu *gpu, uint32_t param) {
@@ -147,7 +135,7 @@ static inline void gp1_write(Gpu *gpu, uint32_t value) {
     uint32_t param = value & 0x00FFFFFF;
 
     switch (cmd) {
-        case 0x00: gpu_reset(gpu); break;
+        case 0x00: gp1_stat_reset(gpu); break;
         case 0x01: gp1_clear_fifo(gpu); break;
         case 0x02: gp1_ack_irq(gpu); break;
         case 0x03: gp1_toggle_display(gpu, param); break;
@@ -234,5 +222,23 @@ void gpu_write32(PSX *psx, uint32_t addr, uint32_t value) {
         default:
             printf("GPU write32 to unimplemented address: 0x%08X, value: 0x%08X\n", addr, value);
             return;
+    }
+}
+
+void gpu_init(Gpu *gpu) {
+    gpu->vram = (uint16_t *)malloc(1024 * 512 * sizeof(uint16_t));
+    gpu_reset(gpu);
+}
+
+void gpu_reset(Gpu *gpu) {
+    if (!gpu) return;
+    memset(gpu->vram, 0, 1024 * 512 * sizeof(uint16_t));
+    gp1_stat_reset(gpu);
+}
+
+void gpu_destroy(Gpu *gpu) {
+    if (gpu->vram) {
+        free(gpu->vram);
+        gpu->vram = NULL;
     }
 }

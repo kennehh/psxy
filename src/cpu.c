@@ -744,7 +744,7 @@ label_fetch:
         return cpu->pc;
     }
 
-    // tty_maybe_putchar(&psx->tty, cpu);
+    tty_maybe_putchar(&psx->tty, cpu);
     begin_step(cpu);
 
     if (unlikely(cpu->pc & 3)) {

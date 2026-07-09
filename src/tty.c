@@ -201,7 +201,7 @@ static inline void tty_printf(TTY *tty, PSX *psx) {
             arg_value_length = strlen(arg_value_buffer);
         }
 
-        strcpy(buffer + buffer_idx, arg_value_buffer);
+        snprintf(buffer + buffer_idx, TTY_BUFFER_SIZE - buffer_idx, "%s", arg_value_buffer);
         buffer_idx += arg_value_length;
     }
 
