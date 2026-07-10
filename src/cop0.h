@@ -44,7 +44,7 @@ void cop0_rfe(Cop0 *cop0);
 
 static inline bool cop0_interrupts_pending(Cop0 *cop0) {
     uint32_t status = cop0->status;
-    if (status & 0x1) { // Check if interrupts are enabled
+    if (!(status & 0x1)) { // Check if interrupts are enabled
         return false;
     }
 

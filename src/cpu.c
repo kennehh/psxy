@@ -646,27 +646,28 @@ static inline void execute_bcond(PSX *psx) {
     }
 }
 
-static inline uint32_t fetch_instruction(PSX *psx, uint32_t *fetch_page, uint8_t **fetch_page_ptr) {
+static inline uint32_t fetch_instruction(PSX *psx) {
     #ifdef PSXY_SINGLE_STEP_TEST_MODE
     return bus_fetch32(psx, &psx->bus, psx->cpu.pc);
     #endif
 
     uint32_t pc = psx->cpu.pc;
     uint32_t page = get_page_index(pc);
+    Cpu *cpu = &psx->cpu;
 
-    if (page != *fetch_page) {
-        *fetch_page_ptr = psx->bus.read_pages[page];
-        *fetch_page = page;
+    if (page != cpu->fetch_page) {
+        cpu->fetch_page_ptr = psx->bus.read_pages[page];
+        cpu->fetch_page = page;
     }
 
-    if (unlikely(*fetch_page_ptr == NULL)) {
+    if (unlikely(cpu->fetch_page_ptr == NULL)) {
         // Fallback to bus fetch if page pointer is NULL, unlikely to happen in normal operation
         return bus_fetch32(psx, &psx->bus, pc);
     }
 
     uint32_t inst;
     uint32_t offset = pc & BUS_PAGE_MASK;
-    memcpy(&inst, *fetch_page_ptr + offset, sizeof(uint32_t));
+    memcpy(&inst, cpu->fetch_page_ptr + offset, sizeof(uint32_t));
     return inst;
 }
 
@@ -720,8 +721,6 @@ uint32_t cpu_step(PSX *psx) {
 
 uint32_t cpu_run(PSX *psx, uint32_t cycles) {
     Cpu *cpu = &psx->cpu;
-    uint32_t fetch_page = cpu->fetch_page;
-    uint8_t *fetch_page_ptr = cpu->fetch_page_ptr;
 
     // Use the computed goto technique for faster instruction dispatch
     static void *opcode_table[64] = {
@@ -752,7 +751,7 @@ label_fetch:
         goto label_finish;
     }
 
-    cpu->inst = fetch_instruction(psx, &fetch_page, &fetch_page_ptr);
+    cpu->inst = fetch_instruction(psx);
 
     if (cpu->inst == 0) {
         goto label_finish; // Skip execution for NOP
