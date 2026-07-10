@@ -28,7 +28,8 @@ static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
 }
 
 static inline uint32_t gpu_gp1_read32(Gpu *gpu) {
-    return gpu->gpu_stat;
+    // return gpu->gpu_stat;
+    return 0x1c802000; // Default status for now
 }
 
 static inline void gp0_write(Gpu *gpu, uint32_t value) {
@@ -225,20 +226,8 @@ void gpu_write32(PSX *psx, uint32_t addr, uint32_t value) {
     }
 }
 
-void gpu_init(Gpu *gpu) {
-    gpu->vram = (uint16_t *)malloc(1024 * 512 * sizeof(uint16_t));
-    gpu_reset(gpu);
-}
-
 void gpu_reset(Gpu *gpu) {
     if (!gpu) return;
     memset(gpu->vram, 0, 1024 * 512 * sizeof(uint16_t));
     gp1_stat_reset(gpu);
-}
-
-void gpu_destroy(Gpu *gpu) {
-    if (gpu->vram) {
-        free(gpu->vram);
-        gpu->vram = NULL;
-    }
 }

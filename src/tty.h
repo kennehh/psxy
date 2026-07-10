@@ -12,7 +12,6 @@ typedef struct TTY {
     size_t strlen;
 } TTY;
 
-void tty_init(TTY *tty);
 void tty_reset(TTY *tty);
 void tty_maybe_putchar(TTY *tty, Cpu *cpu);
 void tty_maybe_printf(TTY *tty, PSX *psx);

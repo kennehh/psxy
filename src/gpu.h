@@ -31,7 +31,7 @@ typedef struct GpuRenderAttributes {
 } GpuRenderAttributes;
 
 typedef struct Gpu {
-    uint16_t *vram;
+    uint16_t vram[1024 * 512]; // 1MB of VRAM
 
     uint32_t gpu_stat;
     uint32_t gpu_read;
@@ -53,9 +53,7 @@ typedef struct Gpu {
     uint16_t output_h;
 } Gpu;
 
-void gpu_init(Gpu *gpu);
 void gpu_reset(Gpu *gpu);
-void gpu_destroy(Gpu *gpu);
 
 uint8_t gpu_read8(PSX *psx, uint32_t addr);
 uint16_t gpu_read16(PSX *psx, uint32_t addr);

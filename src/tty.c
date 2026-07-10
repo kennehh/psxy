@@ -6,12 +6,6 @@
 #include "psx.h"
 #include "bus.h"
 
-void tty_init(TTY *tty) {
-    tty->buffer_index = 0;
-    tty->strlen = 0;
-    tty->buffer[0] = '\0';
-}
-
 void tty_reset(TTY *tty) {
     tty->buffer_index = 0;
     tty->strlen = 0;

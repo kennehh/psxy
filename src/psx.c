@@ -14,8 +14,8 @@ PSX *psx_create(void) {
     }
     bus_init(&psx->bus);
     cpu_reset(&psx->cpu);
-    gpu_init(&psx->gpu);
-    tty_init(&psx->tty);
+    gpu_reset(&psx->gpu);
+    tty_reset(&psx->tty);
     timers_reset(&psx->timers);
 
 #ifndef PSXY_SINGLE_STEP_TEST_MODE
@@ -27,8 +27,6 @@ PSX *psx_create(void) {
 
 void psx_destroy(PSX *psx) {
     if (!psx) return;
-    bus_destroy(&psx->bus);
-    gpu_destroy(&psx->gpu);
     free(psx);
 }
 
