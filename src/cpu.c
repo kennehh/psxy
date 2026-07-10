@@ -684,8 +684,7 @@ static inline void begin_step(Cpu *cpu) {
 }
 
 static inline void check_interrupts(PSX *psx) {
-    bool pending = cop0_interrupts_pending(&psx->cop0);
-    if (pending) {
+    if (psx->cop0.pending_interrupts) {
         psx->cpu.next_exc_code = EXC_INT; // Set exception code for interrupt
     }
 }

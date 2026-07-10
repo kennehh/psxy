@@ -32,7 +32,9 @@ typedef struct Cop0 {
     uint32_t epc; // Exception Program Counter
     uint32_t prid; // Processor Revision ID
 
+    // Cached flags
     uint8_t cache_isolated; // Cache isolation flag
+    uint8_t pending_interrupts; // Flag indicating if there are pending interrupts
 } Cop0;
 
 void cop0_reset(Cop0 *cop0);
@@ -41,15 +43,5 @@ void cop0_raise_exception(PSX *psx, uint8_t exc_code);
 void cop0_write(Cop0 *cop0, uint8_t rd, uint32_t value);
 uint32_t cop0_read(Cop0 *cop0, uint8_t rd);
 void cop0_rfe(Cop0 *cop0);
-
-static inline bool cop0_interrupts_pending(Cop0 *cop0) {
-    uint32_t status = cop0->status;
-    if (!(status & 0x1)) { // Check if interrupts are enabled
-        return false;
-    }
-
-    uint32_t pending = cop0->cause & status & 0xFF00; // Check for pending interrupts
-    return pending;
-}
 
 #endif // COP0_H

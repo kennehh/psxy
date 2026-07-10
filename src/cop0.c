@@ -6,9 +6,21 @@
 #define CAUSE_BD_BIT 0x80000000 // Bit for the branch delay bit in the Cause register
 #define CAUSE_IP_BIT 0x00008000 // Bit in the Cause register indicating an interrupt is pending
 
+static inline void cop0_set_pending_interrupts(Cop0 *cop0) {
+    uint32_t status = cop0->status;
+    if (!(status & 0x1)) { // Check if interrupts are enabled
+        cop0->pending_interrupts = 0; // Clear pending interrupts if interrupts are disabled
+        return;
+    }
+
+    uint32_t pending = cop0->cause & status & 0xFF00; // Check for pending interrupts
+    cop0->pending_interrupts = pending ? 1 : 0;
+}
+
 static inline void cop0_set_status(Cop0 *cop0, uint32_t value) {
     cop0->status = value;
     cop0->cache_isolated = (value & 0x00010000) ? 1 : 0;
+    cop0_set_pending_interrupts(cop0); // Update pending interrupts based on the new status
 }
 
 void cop0_raise_exception(PSX *psx, uint8_t exc_code) {
@@ -20,7 +32,6 @@ void cop0_raise_exception(PSX *psx, uint8_t exc_code) {
     if (exc_code != EXC_IBE && exc_code != EXC_DBE) {
         cop0->cause |= ((cpu->inst >> 26) & 0x3) << 28; // set the coprocessor number bits based on opcode
     }
-
 
     if (IS_IN_DELAY_SLOT(cpu->branch_state)) {
         cop0->cause |= CAUSE_BD_BIT; // Set the branch delay bit if the exception occurred in a delay slot
@@ -50,6 +61,7 @@ void cop0_raise_exception(PSX *psx, uint8_t exc_code) {
     cpu->pc = 0x80000080; // Set the program counter to the exception handler address
     cpu->next_pc = 0x80000084;
     cpu->next_exc_code = EXC_NONE;
+    cop0->pending_interrupts = 0; // Clear the pending interrupts flag after raising an exception
 }
 
 void cop0_write(Cop0 *cop0, uint8_t rd, uint32_t value) {
@@ -81,6 +93,7 @@ uint32_t cop0_read(Cop0 *cop0, uint8_t rd) {
 void cop0_rfe(Cop0 *cop0) {
     uint32_t stat = cop0->status;
     cop0->status = (stat & ~0x0F) | ((stat >> 2) & 0x0F);
+    cop0_set_pending_interrupts(cop0); // Update pending interrupts based on the new status
 }
 
 void cop0_reset(Cop0 *cop0) {
@@ -96,7 +109,9 @@ void cop0_update_interrupts(PSX *psx) {
 
     if (pending) {
         cop0->cause |= CAUSE_IP_BIT; // Set the interrupt pending bit
+        cop0->pending_interrupts = (cop0->status & 0x1) ? 1 : 0;
     } else {
         cop0->cause &= ~CAUSE_IP_BIT; // Clear the interrupt pending bit
+        cop0->pending_interrupts = 0;
     }
 }
