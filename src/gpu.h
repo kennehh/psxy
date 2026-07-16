@@ -6,6 +6,23 @@
 #include <stdbool.h>
 #include "common.h"
 
+typedef struct GpuVramWrite {
+    uint8_t active;
+    uint16_t x, y;
+    uint16_t w, h;
+    uint16_t cur_x, cur_y;
+    uint32_t words_left;
+} GpuVramWrite;
+
+typedef struct GpuVramRead {
+    uint8_t active;
+    uint16_t x, y;
+    uint16_t w, h;
+    uint16_t cur_x, cur_y;
+    uint32_t pixels_left;
+    uint32_t words_left;
+} GpuVramRead;
+
 typedef struct GpuDisplay {
     uint16_t vram_x, vram_y;
     uint16_t h_start, h_end;
@@ -21,17 +38,18 @@ typedef struct GpuDisplay {
     uint8_t reverse_flag;
 } GpuDisplay;
 
-typedef struct GpuRenderAttributes {
-    uint32_t draw_mode;
-    uint32_t texture_window;
-    uint32_t drawing_area_top_left;
-    uint32_t drawing_area_bottom_right;
-    uint32_t drawing_offset;
-    uint32_t mask_bit_setting;
-} GpuRenderAttributes;
+typedef struct GpuRenderRawAttributes {
+    uint32_t draw_mode_raw;
+    uint32_t tex_window_raw;
+    uint32_t draw_tl_raw;
+    uint32_t draw_br_raw;
+    uint32_t draw_offset_raw;
+    uint32_t mask_setting_raw;
+} GpuRenderRawAttributes;
+
 
 typedef struct Gpu {
-    uint16_t vram[1024 * 512]; // 1MB of VRAM
+    uint16_t vram[1024 * 512];
 
     uint32_t gpu_stat;
     uint32_t gpu_read;
@@ -41,13 +59,16 @@ typedef struct Gpu {
     uint32_t gp0_count;
     uint32_t gp0_expected;
 
+    GpuVramRead vram_read;
+    GpuVramWrite vram_write;
+
     GpuDisplay display;
 
     uint8_t display_disabled;
     uint8_t dma_direction;
     uint8_t vram_2MB;
 
-    GpuRenderAttributes render_attr;
+    GpuRenderRawAttributes render_attr;
 
     uint16_t output_w;
     uint16_t output_h;

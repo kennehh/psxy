@@ -3,37 +3,234 @@
 #include "gpu.h"
 #include "psx.h"
 
-#define GPU_STATUS_REVERSE_BIT (1 << 14)
-#define GPU_STATUS_H_RES_368_BIT (1 << 16)
-#define GPU_STATUS_H_RES_BIT (3 << 17)
-#define GPU_STATUS_V_RES_BIT (1 << 19)
-#define GPU_STATUS_VIDEO_MODE_BIT (3 << 20)
-#define GPU_STATUS_COLOR_DEPTH_BIT (1 << 21)
-#define GPU_STATUS_INTERLACED_BIT (1 << 22)
-#define GPU_STATUS_DISPLAY_DISABLED_BIT (1 << 23)
-#define GPU_STATUS_INTERRUPT_BIT (1 << 24)
+enum GpuStat {
+    GPUSTAT_TEX_PAGE_X_MASK = 3 << 0,
+    GPUSTAT_TEX_PAGE_Y_BIT = 1 << 4,
+    GPUSTAT_SEMI_TRANSPARENT_BITS = 2 << 5,
+    GPUSTAT_TEX_PAGE_COLOR_BITS = 2 << 7,
+    GPUSTAT_DITHERING_BIT = 1 << 9,
+    GPUSTAT_INTERLACE_BIT = 1 << 10,
+    GPUSTAT_TEX_PAGE_Y_MODE_BIT = 1 << 11,
+    GPUSTAT_DRAW_MODE_MASK = 0xF << 12,
 
-#define GPU_STATUS_DMA_DIRECTION_SHIFT 29
-#define GPU_STATUS_DMA_DIRECTION_MASK (3 << GPU_STATUS_DMA_DIRECTION_SHIFT)
+    GPUSTAT_REVERSE_BIT = 1 << 14,
+    GPUSTAT_H_RES_368_BIT = 1 << 16,
+    GPUSTAT_H_RES_BITS = 3 << 17,
+    GPUSTAT_V_RES_BIT = 1 << 19,
+    GPUSTAT_VIDEO_MODE_BIT = 3 << 20,
+    GPUSTAT_COLOR_DEPTH_BIT = 1 << 21,
+    GPUSTAT_INTERLACED_BIT = 1 << 22,
+    GPUSTAT_DISPLAY_DISABLED_BIT = 1 << 23,
+    GPUSTAT_INTERRUPT_BIT = 1 << 24,
+    GPUSTAT_DISPLAY_MODE_MASK = (GPUSTAT_REVERSE_BIT | GPUSTAT_H_RES_368_BIT | GPUSTAT_H_RES_BITS | GPUSTAT_V_RES_BIT | GPUSTAT_VIDEO_MODE_BIT | GPUSTAT_COLOR_DEPTH_BIT | GPUSTAT_INTERLACED_BIT | GPUSTAT_DISPLAY_DISABLED_BIT ),
 
-#define GPU_STATUS_DISPLAY_MODE_MASK (GPU_STATUS_REVERSE_BIT | GPU_STATUS_H_RES_368_BIT | GPU_STATUS_H_RES_BIT | GPU_STATUS_V_RES_BIT | GPU_STATUS_VIDEO_MODE_BIT | GPU_STATUS_COLOR_DEPTH_BIT | GPU_STATUS_INTERLACED_BIT | GPU_STATUS_DISPLAY_DISABLED_BIT)
+    GPUSTAT_DRQ_BIT = 1 << 25,
+    GPUSTAT_CMD_READY_BIT = 1 << 26,
+    GPUSTAT_READ_READY_BIT = 1 << 27,
+    GPUSTAT_WRITE_FIFO_EMPTY_BIT = 1 << 28,
+
+    GPUSTAT_DMA_DIRECTION_SHIFT = 29,
+    GPUSTAT_DMA_DIRECTION_MASK = 3 << GPUSTAT_DMA_DIRECTION_SHIFT,
+};
 
 static inline void gpu_update_display_size(Gpu *gpu) {
     gpu->output_w = gpu->display.h_end - gpu->display.h_start;
     gpu->output_h = gpu->display.v_end - gpu->display.v_start;
 }
 
+static inline uint16_t gp0_read_vram_pixel(Gpu *gpu) {
+    GpuVramRead *read = &gpu->vram_read;
+    uint32_t x = (read->x + read->cur_x) & 0x3FF; // Wrap around at 1024
+    uint32_t y = (read->y + read->cur_y) & 0x1FF; // Wrap around at 512
+    uint16_t pixel = gpu->vram[y * 1024 + x];
+
+    // Update current position
+    read->cur_x++;
+    if (read->cur_x >= read->w) {
+        read->cur_x = 0;
+        read->cur_y++;
+    }
+    if (read->pixels_left > 0) {
+        read->pixels_left--;
+    }
+    return pixel;
+}
+
+static inline void gpu_update_drq(Gpu *gpu) {
+    gpu->gpu_stat &= ~GPUSTAT_DRQ_BIT; // Clear DRQ bit
+
+    switch (gpu->dma_direction) {
+        case 0: // No DMA
+            break;
+        case 1: // CPU to GPU
+            if (gpu->gp0_count > 0) {
+                gpu->gpu_stat |= GPUSTAT_DRQ_BIT; // Set DRQ bit
+            }
+            break;
+        case 2: // GPU to CPU
+            if (gpu->vram_read.active && gpu->vram_read.words_left > 0) {
+                gpu->gpu_stat |= GPUSTAT_DRQ_BIT; // Set DRQ bit
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+
 static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
+    GpuVramRead *read = &gpu->vram_read;
+    if (!read->active || read->words_left == 0) {
+        return gpu->gpu_read;
+    }
+
+    uint16_t lo = 0;
+    uint16_t hi = 0;
+
+    if (read->pixels_left > 0) {
+        // read vram pixel
+        lo = gp0_read_vram_pixel(gpu);
+        if (read->pixels_left > 0) {
+            hi = gp0_read_vram_pixel(gpu);
+        }
+    }
+
+    read->words_left--;
+    if (read->words_left == 0) {
+        read->active = 0;
+        gpu->gpu_stat &= ~GPUSTAT_READ_READY_BIT;
+    }
+
+    gpu->gpu_read = (uint32_t)(hi << 16) | (uint32_t)lo;
+
+
     return gpu->gpu_read;
 }
 
 static inline uint32_t gpu_gp1_read32(Gpu *gpu) {
-    // return gpu->gpu_stat;
-    return 0x1c802000; // Default status for now
+    return gpu->gpu_stat;
+}
+
+static inline void gp0_draw_mode(Gpu *gpu, uint32_t param) {
+    gpu->render_attr.draw_mode_raw = param & 0xFFFFFF;
+    gpu->gpu_stat = (gpu->gpu_stat & ~GPUSTAT_DRAW_MODE_MASK) | (param & GPUSTAT_DRAW_MODE_MASK);
+}
+
+static inline void gp0_start_vram_write(Gpu *gpu) {
+    uint32_t coords = gpu->gp0_buffer[1];
+    uint16_t x = (coords >> 16) & 0x3FF;
+    uint16_t y = coords & 0x1FF;
+
+    uint32_t size = gpu->gp0_buffer[2];
+    uint16_t w = (size >> 16) & 0x3FF;
+    uint16_t h = size & 0x1FF;
+
+    GpuVramWrite *write = &gpu->vram_write;
+    write->active = 1;
+    write->x = x;
+    write->y = y;
+    write->cur_x = 0;
+    write->cur_y = 0;
+    write->w = w;
+    write->h = h;
+    write->words_left = (w * h + 1) / 2; // Each word contains two pixels
+}
+
+static inline void gp0_start_vram_read(Gpu *gpu) {
+    uint32_t coords = gpu->gp0_buffer[1];
+    uint16_t x = (coords >> 16) & 0x3FF;
+    uint16_t y = coords & 0x1FF;
+
+    uint32_t size = gpu->gp0_buffer[2];
+    uint16_t w = (size >> 16) & 0x3FF;
+    uint16_t h = size & 0x1FF;
+
+    GpuVramRead *read = &gpu->vram_read;
+    read->active = 1;
+    read->x = x;
+    read->y = y;
+    read->cur_x = 0;
+    read->cur_y = 0;
+    read->w = w;
+    read->h = h;
+    read->pixels_left = w * h;
+    read->words_left = (read->pixels_left + 1) / 2;
+
+    gpu->gpu_stat |= GPUSTAT_READ_READY_BIT;
+}
+
+static inline void gp0_execute(Gpu *gpu) {
+    uint32_t word0 = gpu->gp0_buffer[0];
+    uint8_t cmd = (uint8_t)(word0 >> 24);
+
+    switch (cmd) {
+        case 0x00: // NOP
+            break;
+        case 0x01: // Clear cache
+            break;
+        case 0x02: // Fill rectangle
+            break;
+        case 0xA0: // CPU to VRAM transfer
+            gp0_start_vram_write(gpu);
+            break;
+        case 0xC0: // VRAM to CPU transfer
+            gp0_start_vram_read(gpu);
+            break;
+        case 0x68:
+            break;
+        case 0xE1: // Draw Mode setting
+            gp0_draw_mode(gpu, word0);
+            break;
+        case 0xE2: // Texture Window setting
+            gpu->render_attr.tex_window_raw = word0 & 0xFFFFFF;
+            break;
+        case 0xE3:
+            gpu->render_attr.draw_tl_raw = word0 & 0xFFFFFF;
+            break;
+        case 0xE4:
+            gpu->render_attr.draw_br_raw = word0 & 0xFFFFFF;
+            break;
+        case 0xE5:
+            gpu->render_attr.draw_offset_raw = word0 & 0xFFFFFF;
+            break;
+        case 0xE6:
+            gpu->render_attr.mask_setting_raw = word0 & 0xFFFFFF;
+            break;
+        default:
+            printf("Unimplemented GP0 command: 0x%02X\n", cmd);
+            break;
+    }
+}
+
+static uint32_t gp0_word_count(uint8_t cmd) {
+    switch (cmd) {
+        case 0x02: return 3; // Fill rectangle
+        case 0xA0: return 3; // CPU to VRAM transfer
+        case 0xC0: return 3; // VRAM to CPU transfer
+
+        default: return 1; // 1 word for other commands
+    }
 }
 
 static inline void gp0_write(Gpu *gpu, uint32_t value) {
+    if (gpu->vram_write.active) {
+        // Handle VRAM write operation
+        return;
+    }
 
+    if (gpu->gp0_count == 0) {
+        // First word of a new command
+        uint8_t cmd = (value >> 24) & 0xFF;
+        gpu->gp0_expected = gp0_word_count(cmd);
+    }
+
+    gpu->gp0_buffer[gpu->gp0_count++] = value;
+
+    if (gpu->gp0_count >= gpu->gp0_expected) {
+        // Execute the command
+        gp0_execute(gpu);
+        gpu->gp0_count = 0; // Reset for the next command
+    }
 }
 
 static inline void gp1_clear_fifo(Gpu *gpu) {
@@ -47,7 +244,7 @@ static inline void gp1_stat_reset(Gpu *gpu) {
 
 static inline void gp1_ack_irq(Gpu *gpu) {
     // Clear interrupt flag
-    gpu->gpu_stat &= ~GPU_STATUS_INTERRUPT_BIT;
+    gpu->gpu_stat &= ~GPUSTAT_INTERRUPT_BIT;
 }
 
 static inline void gp1_toggle_display(Gpu *gpu, uint32_t param) {
@@ -55,16 +252,16 @@ static inline void gp1_toggle_display(Gpu *gpu, uint32_t param) {
     gpu->display_disabled = disable;
 
     if (disable) {
-        gpu->gpu_stat &= ~GPU_STATUS_DISPLAY_DISABLED_BIT;
+        gpu->gpu_stat &= ~GPUSTAT_DISPLAY_DISABLED_BIT;
     } else {
-        gpu->gpu_stat |= GPU_STATUS_DISPLAY_DISABLED_BIT;
+        gpu->gpu_stat |= GPUSTAT_DISPLAY_DISABLED_BIT;
     }
 }
 
 static inline void gp1_dma_direction(Gpu *gpu, uint32_t param) {
     uint8_t direction = param & 0x03;
     gpu->dma_direction = direction;
-    gpu->gpu_stat = (gpu->gpu_stat & ~GPU_STATUS_DMA_DIRECTION_MASK) | (direction << GPU_STATUS_DMA_DIRECTION_SHIFT);
+    gpu->gpu_stat = (gpu->gpu_stat & ~GPUSTAT_DMA_DIRECTION_MASK) | (direction << GPUSTAT_DMA_DIRECTION_SHIFT);
 }
 
 static inline void gp1_display_start(Gpu *gpu, uint32_t param) {
@@ -98,7 +295,7 @@ static inline void gp1_display_mode(Gpu *gpu, uint32_t param) {
     display->reverse_flag = (param >> 9) & 0x01; // Bit 9 for reverse flag
 
     // update status register which sets 14, 16-22 bits
-    uint32_t status = gpu->gpu_stat & ~GPU_STATUS_DISPLAY_MODE_MASK;
+    uint32_t status = gpu->gpu_stat & ~GPUSTAT_DISPLAY_MODE_MASK;
     gpu->gpu_stat = status
         | (display->reverse_flag << 14)
         | (display->h_res_368 << 16)
@@ -118,12 +315,12 @@ static inline void gp1_set_vram_size(Gpu *gpu, uint32_t param) {
 static inline void gp1_set_gpu_read(Gpu *gpu, uint32_t param) {
     // TODO: handle old GPU behaviour
 
-    GpuRenderAttributes *attr = &gpu->render_attr;
+    GpuRenderRawAttributes *attr = &gpu->render_attr;
     switch (param & 0x0F) {
-        case 0x02: gpu->gpu_read = attr->texture_window; break;
-        case 0x03: gpu->gpu_read = attr->drawing_area_top_left; break;
-        case 0x04: gpu->gpu_read = attr->drawing_area_bottom_right; break;
-        case 0x05: gpu->gpu_read = attr->drawing_offset; break;
+        case 0x02: gpu->gpu_read = attr->tex_window_raw; break;
+        case 0x03: gpu->gpu_read = attr->draw_tl_raw; break;
+        case 0x04: gpu->gpu_read = attr->draw_br_raw; break;
+        case 0x05: gpu->gpu_read = attr->draw_offset_raw; break;
         case 0x06: /* gpu_read unchanged */ break;
         case 0x07: gpu->gpu_read = 2; break; // GPU version
         case 0x08: gpu->gpu_read = 0; break; // unknown. returns 0 on newer PS1 models
