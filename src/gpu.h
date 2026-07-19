@@ -11,6 +11,7 @@ typedef struct GpuVramWrite {
     uint16_t x, y;
     uint16_t w, h;
     uint16_t cur_x, cur_y;
+    uint32_t pixels_left;
     uint32_t words_left;
 } GpuVramWrite;
 

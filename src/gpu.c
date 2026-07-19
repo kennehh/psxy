@@ -33,6 +33,12 @@ enum GpuStat {
     GPUSTAT_DMA_DIRECTION_MASK = 3 << GPUSTAT_DMA_DIRECTION_SHIFT,
 };
 
+enum GpuDmaDirection {
+    GPU_DMA_NONE = 0,
+    GPU_DMA_CPU_TO_GPU = 1,
+    GPU_DMA_GPU_TO_CPU = 2,
+};
+
 static inline void gpu_update_display_size(Gpu *gpu) {
     gpu->output_w = gpu->display.h_end - gpu->display.h_start;
     gpu->output_h = gpu->display.v_end - gpu->display.v_start;
@@ -60,14 +66,14 @@ static inline void gpu_update_drq(Gpu *gpu) {
     gpu->gpu_stat &= ~GPUSTAT_DRQ_BIT; // Clear DRQ bit
 
     switch (gpu->dma_direction) {
-        case 0: // No DMA
+        case GPU_DMA_NONE:
             break;
-        case 1: // CPU to GPU
+        case GPU_DMA_CPU_TO_GPU:
             if (gpu->gp0_count > 0) {
                 gpu->gpu_stat |= GPUSTAT_DRQ_BIT; // Set DRQ bit
             }
             break;
-        case 2: // GPU to CPU
+        case GPU_DMA_GPU_TO_CPU:
             if (gpu->vram_read.active && gpu->vram_read.words_left > 0) {
                 gpu->gpu_stat |= GPUSTAT_DRQ_BIT; // Set DRQ bit
             }
@@ -80,7 +86,7 @@ static inline void gpu_update_drq(Gpu *gpu) {
 
 static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
     GpuVramRead *read = &gpu->vram_read;
-    if (!read->active || read->words_left == 0) {
+    if (!read->active) {
         return gpu->gpu_read;
     }
 
@@ -102,7 +108,7 @@ static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
     }
 
     gpu->gpu_read = (uint32_t)(hi << 16) | (uint32_t)lo;
-
+    gpu_update_drq(gpu);
 
     return gpu->gpu_read;
 }
@@ -134,6 +140,49 @@ static inline void gp0_start_vram_write(Gpu *gpu) {
     write->w = w;
     write->h = h;
     write->words_left = (w * h + 1) / 2; // Each word contains two pixels
+    write->pixels_left = w * h;
+}
+
+static inline void gp0_write_vram_pixel(Gpu *gpu, uint16_t pixel) {
+    GpuVramWrite *write = &gpu->vram_write;
+    if (!write->pixels_left) {
+        return;
+    }
+    write->pixels_left--;
+
+    uint32_t x = (write->x + write->cur_x) & 0x3FF; // Wrap around at 1024
+    uint32_t y = (write->y + write->cur_y) & 0x1FF; // Wrap around at 512
+    gpu->vram[y * 1024 + x] = pixel;
+
+    // Update current position
+    write->cur_x++;
+    if (write->cur_x >= write->w) {
+        write->cur_x = 0;
+        write->cur_y++;
+    }
+    if (write->words_left > 0) {
+        write->words_left--;
+    }
+}
+
+static inline void gp0_write_vram_data(Gpu *gpu, uint32_t value) {
+    GpuVramWrite *write = &gpu->vram_write;
+    if (!write->active) {
+        return;
+    }
+
+    uint16_t lo = value & 0xFFFF;
+    uint16_t hi = (value >> 16) & 0xFFFF;
+
+    gp0_write_vram_pixel(gpu, lo);
+    if (gpu->vram_write.pixels_left > 0) {
+        gp0_write_vram_pixel(gpu, hi);
+    }
+
+    if (gpu->vram_write.words_left == 0) {
+        gpu->vram_write.active = 0;
+        gpu->gpu_stat |= GPUSTAT_WRITE_FIFO_EMPTY_BIT;
+    }
 }
 
 static inline void gp0_start_vram_read(Gpu *gpu) {
@@ -171,9 +220,11 @@ static inline void gp0_execute(Gpu *gpu) {
         case 0x02: // Fill rectangle
             break;
         case 0xA0: // CPU to VRAM transfer
+            printf("Starting VRAM write transfer\n");
             gp0_start_vram_write(gpu);
             break;
         case 0xC0: // VRAM to CPU transfer
+            printf("Starting VRAM read transfer\n");
             gp0_start_vram_read(gpu);
             break;
         case 0x68:
@@ -214,7 +265,7 @@ static uint32_t gp0_word_count(uint8_t cmd) {
 
 static inline void gp0_write(Gpu *gpu, uint32_t value) {
     if (gpu->vram_write.active) {
-        // Handle VRAM write operation
+        gp0_write_vram_data(gpu, value);
         return;
     }
 
