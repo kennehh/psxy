@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "tty.h"
-#include "cpu.h"
-#include "psx.h"
-#include "bus.h"
+#include "support/tty.h"
+#include "cpu/cpu.h"
+#include "core/psx.h"
+#include "memory/bus.h"
 
 void tty_reset(TTY *tty) {
     tty->buffer_index = 0;

@@ -2,7 +2,7 @@
 #define TIMERS_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 typedef struct Timer {
     uint16_t counter;

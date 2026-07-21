@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psx.h"
-#include "loader.h"
-#include "tty.h"
-#include "hrtime.h"
+#include "core/psx.h"
+#include "support/loader.h"
+#include "support/tty.h"
+#include "support/hrtime.h"
 
 
 #define MAX_STEPS 10000000
@@ -31,31 +31,19 @@ static void benchmark(PSX *psx) {
 }
 
 static void run_until_kernel_init(PSX *psx) {
-    // uint32_t steps = 0;
-    // while (steps++ < MAX_STEPS) {
-    //     // tty_maybe_putchar(tty, cpu);
-    //     // cpu_step(cpu, bus);
-    //     // tty_maybe_putchar(psx->tty, psx->cpu);
-    //     // cpu_step_block(psx);
-    //     cpu_step(psx);
-    //     if (psx->cpu->pc == TARGET_PC) {
-    //         break;
-    //     }
-    // }
-
-    psx_run(psx, 16000000);
+    psx_run(psx, 8000000);
 }
 
 int main(void) {
     PSX* psx = psx_create();
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
         psx_reset(psx);
-        load_bios(psx, "../../roms/SCPH1001.BIN");
+        load_bios(psx, "roms/SCPH1001.BIN");
         run_until_kernel_init(psx);
-        // load_exe(psx, "roms/psxtest_cpu.exe");
-        // printf("Benchmark iteration %d\n", i + 1);
-        // benchmark(psx);
+        load_exe(psx, "roms/psxtest_cpu.exe");
+        printf("Benchmark iteration %d\n", i + 1);
+        benchmark(psx);
 
     }
 

@@ -15,18 +15,20 @@ option(PSXY_ENABLE_NATIVE_OPT "Enable native CPU-specific optimization" OFF)
 option(PSXY_STRICT_WARNINGS "Treat warnings as errors" OFF)
 
 add_library(psxy_core
-    src/psx.c
-    src/bus.c
-    src/cpu.c
-    src/cop0.c
-    src/tty.c
-    src/loader.c
-    src/gpu.c
-    src/irq.c
-    src/timers.c
-    src/memctrl.c
-    src/spu.c
-    src/exp2.c
+    src/core/psx.c
+    src/memory/bus.c
+    src/cpu/cpu.c
+    src/cpu/cop0.c
+    src/support/tty.c
+    src/support/loader.c
+    src/devices/gpu/gpu.c
+    src/devices/gpu/gp0.c
+    src/devices/gpu/gp1.c
+    src/devices/irq.c
+    src/devices/timers.c
+    src/memory/memctrl.c
+    src/devices/spu.c
+    src/devices/exp2.c
 )
 
 target_include_directories(psxy_core PRIVATE src)
@@ -109,6 +111,7 @@ endif()
 add_executable(psxy
     src/main.c
 )
+target_include_directories(psxy PRIVATE src)
 target_link_libraries(psxy PRIVATE psxy_core)
 
 enable_testing()

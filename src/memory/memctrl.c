@@ -1,5 +1,5 @@
-#include "memctrl.h"
-#include "psx.h"
+#include "memory/memctrl.h"
+#include "core/psx.h"
 
 #define MEMCTRL_REGS(X) \
     X(0x1F801000, exp1_base) \

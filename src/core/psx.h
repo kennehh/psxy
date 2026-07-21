@@ -1,15 +1,15 @@
 #ifndef PSX_H
 #define PSX_H
 
-#include "common.h"
-#include "bus.h"
-#include "cpu.h"
-#include "tty.h"
-#include "gpu.h"
-#include "irq.h"
-#include "cop0.h"
-#include "timers.h"
-#include "memctrl.h"
+#include "core/common.h"
+#include "memory/bus.h"
+#include "cpu/cpu.h"
+#include "support/tty.h"
+#include "devices/gpu/gpu.h"
+#include "devices/irq.h"
+#include "cpu/cop0.h"
+#include "devices/timers.h"
+#include "memory/memctrl.h"
 
 typedef struct PSX {
     Cpu cpu;

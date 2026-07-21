@@ -2,7 +2,7 @@
 #define TTY_H
 
 #include <stdlib.h>
-#include "common.h"
+#include "core/common.h"
 
 #define TTY_BUFFER_SIZE 128
 

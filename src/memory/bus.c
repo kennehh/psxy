@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "bus.h"
-#include "gpu.h"
-#include "irq.h"
-#include "timers.h"
-#include "memctrl.h"
-#include "spu.h"
-#include "exp2.h"
+#include "memory/bus.h"
+#include "devices/gpu/gpu.h"
+#include "devices/irq.h"
+#include "devices/timers.h"
+#include "memory/memctrl.h"
+#include "devices/spu.h"
+#include "devices/exp2.h"
 
 static void map_buffer(Bus *bus, uint8_t *buffer, size_t size, uint32_t start_phys_addr, uint32_t end_phys_addr, bool read_only) {
     for (uint32_t addr = start_phys_addr; addr < end_phys_addr; addr += BUS_PAGE_SIZE) {

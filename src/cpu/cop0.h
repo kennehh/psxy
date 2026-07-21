@@ -2,7 +2,7 @@
 #define COP0_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 #define EXC_NONE 0xFF // No exception
 #define EXC_INT  0x00 // Interrupt

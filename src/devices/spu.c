@@ -1,5 +1,5 @@
-#include "spu.h"
-#include "psx.h"
+#include "devices/spu.h"
+#include "core/psx.h"
 
 uint8_t spu_read8(PSX *psx, uint32_t addr) {
     return 0;

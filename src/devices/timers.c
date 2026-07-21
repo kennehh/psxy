@@ -1,7 +1,7 @@
 #include <stdlib.h>
-#include "common.h"
-#include "timers.h"
-#include "psx.h"
+#include "core/common.h"
+#include "devices/timers.h"
+#include "core/psx.h"
 
 #define TIMERS_REGS(X) \
     X(0x1F801100, timer0.counter) \

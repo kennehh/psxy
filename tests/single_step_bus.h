@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 typedef struct {
     uint8_t actions;

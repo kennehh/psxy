@@ -7,18 +7,20 @@ target_link_libraries(test_cpu PRIVATE psxy_core)
 target_include_directories(test_cpu PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 add_executable(test_single_step
-    ${PROJECT_SOURCE_DIR}/src/psx.c
-    ${PROJECT_SOURCE_DIR}/src/bus.c
-    ${PROJECT_SOURCE_DIR}/src/cpu.c
-    ${PROJECT_SOURCE_DIR}/src/cop0.c
-    ${PROJECT_SOURCE_DIR}/src/tty.c
-    ${PROJECT_SOURCE_DIR}/src/loader.c
-    ${PROJECT_SOURCE_DIR}/src/gpu.c
-    ${PROJECT_SOURCE_DIR}/src/irq.c
-    ${PROJECT_SOURCE_DIR}/src/timers.c
-    ${PROJECT_SOURCE_DIR}/src/memctrl.c
-    ${PROJECT_SOURCE_DIR}/src/spu.c
-    ${PROJECT_SOURCE_DIR}/src/exp2.c
+    ${PROJECT_SOURCE_DIR}/src/core/psx.c
+    ${PROJECT_SOURCE_DIR}/src/memory/bus.c
+    ${PROJECT_SOURCE_DIR}/src/cpu/cpu.c
+    ${PROJECT_SOURCE_DIR}/src/cpu/cop0.c
+    ${PROJECT_SOURCE_DIR}/src/support/tty.c
+    ${PROJECT_SOURCE_DIR}/src/support/loader.c
+    ${PROJECT_SOURCE_DIR}/src/devices/gpu/gpu.c
+    ${PROJECT_SOURCE_DIR}/src/devices/gpu/gp0.c
+    ${PROJECT_SOURCE_DIR}/src/devices/gpu/gp1.c
+    ${PROJECT_SOURCE_DIR}/src/devices/irq.c
+    ${PROJECT_SOURCE_DIR}/src/devices/timers.c
+    ${PROJECT_SOURCE_DIR}/src/memory/memctrl.c
+    ${PROJECT_SOURCE_DIR}/src/devices/spu.c
+    ${PROJECT_SOURCE_DIR}/src/devices/exp2.c
     test_single_step.c
 )
 target_compile_definitions(test_single_step PRIVATE PSXY_SINGLE_STEP_TEST_MODE)

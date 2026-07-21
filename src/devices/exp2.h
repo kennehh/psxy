@@ -2,7 +2,7 @@
 #define EXP2_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 uint8_t exp2_read8(PSX *psx, uint32_t addr);
 uint16_t exp2_read16(PSX *psx, uint32_t addr);

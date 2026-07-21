@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "psx.h"
-#include "loader.h"
-#include "bus.h"
+#include "core/psx.h"
+#include "support/loader.h"
+#include "memory/bus.h"
 
 void load_bios(PSX *psx, const char *bios_path) {
     FILE *bios_file = fopen(bios_path, "rb");

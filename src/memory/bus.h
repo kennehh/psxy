@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "common.h"
+#include "core/common.h"
 
 #define RAM_SIZE       1024 * 1024 * 2 // 2MB of RAM
 #define RAM_PHYS_START 0x00000000

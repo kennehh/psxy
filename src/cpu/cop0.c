@@ -1,5 +1,5 @@
-#include "psx.h"
-#include "cop0.h"
+#include "core/psx.h"
+#include "cpu/cop0.h"
 
 #define CAUSE_IP_MASK 0x0000FF00 // Mask for the interrupt pending bits in the Cause register
 #define CAUSE_BT_BIT 0x40000000 // Bit for the branch taken bit in the Cause register

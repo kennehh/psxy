@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "common.h"
+#include "core/common.h"
 
 typedef struct GpuVramWrite {
     uint8_t active;

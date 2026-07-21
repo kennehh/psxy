@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "common.h"
+#include "core/common.h"
 
 #define BRANCH_STATE_NO_DELAY 0b00
 #define BRANCH_STATE_IN_DELAY_SLOT 0b01

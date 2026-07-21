@@ -2,7 +2,7 @@
 #define MEMCTRL_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 typedef struct MemCtrl {
     uint32_t exp1_base; // Expansion 1 base address

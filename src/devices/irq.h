@@ -2,7 +2,7 @@
 #define IRQ_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 typedef struct Irq {
     uint16_t stat;   // Interrupt status

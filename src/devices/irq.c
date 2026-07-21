@@ -1,6 +1,6 @@
-#include "irq.h"
-#include "psx.h"
-#include "cop0.h"
+#include "devices/irq.h"
+#include "core/psx.h"
+#include "cpu/cop0.h"
 
 void irq_reset(Irq *irq) {
     irq->stat = 0;

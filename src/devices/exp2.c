@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "exp2.h"
+#include "devices/exp2.h"
 
 uint8_t exp2_read8(PSX *psx, uint32_t addr) {
     return 0;

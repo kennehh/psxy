@@ -1,10 +1,10 @@
 #include <stdio.h>
-#include "cpu.h"
-#include "bus.h"
-#include "tty.h"
-#include "psx.h"
-#include "loader.h"
-#include "timers.h"
+#include "cpu/cpu.h"
+#include "memory/bus.h"
+#include "support/tty.h"
+#include "core/psx.h"
+#include "support/loader.h"
+#include "devices/timers.h"
 
 PSX *psx_create(void) {
     PSX *psx = (PSX *)malloc(sizeof(PSX));

@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psx.h"
-#include "cop0.h"
-#include "cpu.h"
-#include "tty.h"
-#include "bus.h"
+#include "core/psx.h"
+#include "cpu/cop0.h"
+#include "cpu/cpu.h"
+#include "support/tty.h"
+#include "memory/bus.h"
 
 #define OPCODE(cpu) ((cpu->inst >> 26) & 0x3F)
 #define FUNCT(cpu) (cpu->inst & 0x3F)

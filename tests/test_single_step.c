@@ -1,9 +1,9 @@
 #define _GNU_SOURCE
 
 #include "single_step_bus.h"
-#include "cpu.h"
-#include "psx.h"
-#include "cop0.h"
+#include "cpu/cpu.h"
+#include "core/psx.h"
+#include "cpu/cop0.h"
 #include <stdio.h>
 #include <assert.h>
 #include <json-c/json.h>

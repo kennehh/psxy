@@ -2,7 +2,7 @@
 #define SPU_H
 
 #include <stdint.h>
-#include "common.h"
+#include "core/common.h"
 
 uint8_t spu_read8(PSX *psx, uint32_t addr);
 uint16_t spu_read16(PSX *psx, uint32_t addr);
