@@ -22,7 +22,7 @@ enum GpuStat {
     GPUSTAT_INTERLACED_BIT = 1 << 22,
     GPUSTAT_DISPLAY_DISABLED_BIT = 1 << 23,
     GPUSTAT_INTERRUPT_BIT = 1 << 24,
-    GPUSTAT_DISPLAY_MODE_MASK = (GPUSTAT_REVERSE_BIT | GPUSTAT_H_RES_368_BIT | GPUSTAT_H_RES_BITS | GPUSTAT_V_RES_BIT | GPUSTAT_VIDEO_MODE_BIT | GPUSTAT_COLOR_DEPTH_BIT | GPUSTAT_INTERLACED_BIT | GPUSTAT_DISPLAY_DISABLED_BIT ),
+    GPUSTAT_DISPLAY_MODE_MASK = (GPUSTAT_REVERSE_BIT | GPUSTAT_H_RES_368_BIT | GPUSTAT_H_RES_BITS | GPUSTAT_V_RES_BIT | GPUSTAT_VIDEO_MODE_BIT | GPUSTAT_COLOR_DEPTH_BIT | GPUSTAT_INTERLACED_BIT | GPUSTAT_DISPLAY_DISABLED_BIT),
 
     GPUSTAT_DRQ_BIT = 1 << 25,
     GPUSTAT_CMD_READY_BIT = 1 << 26,
@@ -83,13 +83,8 @@ static inline void gpu_update_drq(Gpu *gpu) {
     }
 }
 
-
-static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
+static inline uint32_t gp0_read_vram_data(Gpu *gpu) {
     GpuVramRead *read = &gpu->vram_read;
-    if (!read->active) {
-        return gpu->gpu_read;
-    }
-
     uint16_t lo = 0;
     uint16_t hi = 0;
 
@@ -110,6 +105,14 @@ static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
     gpu->gpu_read = (uint32_t)(hi << 16) | (uint32_t)lo;
     gpu_update_drq(gpu);
 
+    return gpu->gpu_read;
+}
+
+
+static inline uint32_t gpu_gp0_read32(Gpu *gpu) {
+    if (gpu->vram_read.active) {
+        return gp0_read_vram_data(gpu);
+    }
     return gpu->gpu_read;
 }
 
@@ -167,20 +170,16 @@ static inline void gp0_write_vram_pixel(Gpu *gpu, uint16_t pixel) {
 
 static inline void gp0_write_vram_data(Gpu *gpu, uint32_t value) {
     GpuVramWrite *write = &gpu->vram_write;
-    if (!write->active) {
-        return;
-    }
-
     uint16_t lo = value & 0xFFFF;
     uint16_t hi = (value >> 16) & 0xFFFF;
 
     gp0_write_vram_pixel(gpu, lo);
-    if (gpu->vram_write.pixels_left > 0) {
+    if (write->pixels_left > 0) {
         gp0_write_vram_pixel(gpu, hi);
     }
 
-    if (gpu->vram_write.words_left == 0) {
-        gpu->vram_write.active = 0;
+    if (write->words_left == 0) {
+        write->active = 0;
         gpu->gpu_stat |= GPUSTAT_WRITE_FIFO_EMPTY_BIT;
     }
 }
@@ -478,4 +477,31 @@ void gpu_reset(Gpu *gpu) {
     if (!gpu) return;
     memset(gpu->vram, 0, 1024 * 512 * sizeof(uint16_t));
     gp1_stat_reset(gpu);
+}
+
+void gpu_vram_dump_ppm(Gpu *gpu, const char *filename) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) return;
+
+    fprintf(f, "P6\n%d %d\n255\n", 1024, 512);
+
+    for (uint32_t y = 0; y < 512; y++) {
+        for (uint32_t x = 0; x < 1024; x++) {
+            uint16_t p = gpu->vram[y * 1024 + x];
+
+            uint8_t r5 = (p >> 0) & 0x1F;
+            uint8_t g5 = (p >> 5) & 0x1F;
+            uint8_t b5 = (p >> 10) & 0x1F;
+
+            uint8_t rgb[3] = {
+                (uint8_t)((r5 << 3) | (r5 >> 2)),
+                (uint8_t)((g5 << 3) | (g5 >> 2)),
+                (uint8_t)((b5 << 3) | (b5 >> 2)),
+            };
+
+            fwrite(rgb, 1, 3, f);
+        }
+    }
+
+    fclose(f);
 }

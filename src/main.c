@@ -15,7 +15,7 @@
 
 static void benchmark(PSX *psx) {
     uint32_t instructions_executed = 8000000;
-    uint32_t max_steps = 8000000;
+    uint32_t max_steps = 10000000;
 
     uint64_t start = get_time_ns();
 
@@ -43,20 +43,20 @@ static void run_until_kernel_init(PSX *psx) {
     //     }
     // }
 
-    psx_run(psx, 2000000);
+    psx_run(psx, 16000000);
 }
 
 int main(void) {
     PSX* psx = psx_create();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         psx_reset(psx);
-        load_bios(psx, "roms/SCPH1001.BIN");
+        load_bios(psx, "../../roms/SCPH1001.BIN");
         run_until_kernel_init(psx);
-        load_exe(psx, "roms/psxtest_cpu.exe");
+        // load_exe(psx, "roms/psxtest_cpu.exe");
+        // printf("Benchmark iteration %d\n", i + 1);
+        // benchmark(psx);
 
-        printf("Benchmark iteration %d\n", i + 1);
-        benchmark(psx);
     }
 
     psx_destroy(psx);

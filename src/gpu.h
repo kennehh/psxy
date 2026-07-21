@@ -84,4 +84,6 @@ void gpu_write8(PSX *psx, uint32_t addr, uint8_t value);
 void gpu_write16(PSX *psx, uint32_t addr, uint16_t value);
 void gpu_write32(PSX *psx, uint32_t addr, uint32_t value);
 
+void gpu_vram_dump_ppm(Gpu *gpu, const char *filename);
+
 #endif // GPU_H
